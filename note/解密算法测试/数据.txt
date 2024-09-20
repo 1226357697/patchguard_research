@@ -1,0 +1,31 @@
+undocde timer:FFFF898B1033B1DB dpc:FFCE9DA49829E906(FFFF898B1033B21B) guess_pg:1
+kd> dt _KDPC FFFF898B1033B21B
+nt!_KDPC
+   +0x000 TargetInfoAsUlong : 0x113
+   +0x000 Type             : 0x13 ''
+   +0x001 Importance       : 0x1 ''
+   +0x002 Number           : 0
+   +0x008 DpcListEntry     : _SINGLE_LIST_ENTRY
+   +0x010 ProcessorHistory : 0
+   +0x018 DeferredRoutine  : 0xfffff803`02ded770     void  nt!ExpCenturyDpcRoutine+0
+   +0x020 DeferredContext  : 0x0378c3bc`be1ed466 Void
+   +0x028 SystemArgument1  : 0x00000000`0000001d Void
+   +0x030 SystemArgument2  : 0x00000000`bbf0a934 Void
+   +0x038 DpcData          : (null) 
+
+PG_CTX(FFFF898B1033B21B+0x40): fca74a37`ac1fd4e3 (FFFF898B12010085)
+CTX_SIZE: 1C960
+
+KiWaitNever 6ab04405`9fdd7af6
+KiWaitAlways 00b3fbf3`2de56818
+
+
+未解密：pg_undec.bin
+未解密：pg_dec.bin
+
+
+注意：
+ExpTimerDpcRoutine  这个函数的PG常量没有加密
+ExpCenturyDpcRoutine 本次解密是该函数触发的PG
+CmpAppendDllSection 
+
