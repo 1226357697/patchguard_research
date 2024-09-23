@@ -1,0 +1,22 @@
+.text:000000014006356C 48 8B 05 9D F1 50 00          mov     rax, cs:KiWaitNever
+.text:0000000140063576 48 8B 35 7B F3 50 00          mov     rsi, cs:KiWaitAlways
+.text:000000014006357D 41 0F B6 E9                   movzx   ebp, r9b
+.text:0000000140063581 4C 8B AC 24 A0 00 00 00       mov     r13, [rsp+78h+dpc]
+.text:0000000140063589 45 8B F8                      mov     r15d, r8d
+.text:000000014006358C 49 33 F5                      xor     rsi, r13
+.text:0000000140063592 48 0F CE                      bswap   rsi
+.text:0000000140063595 48 33 F1                      xor     rsi, rcx
+.text:0000000140063598 8B C8                         mov     ecx, eax
+.text:000000014006359A 48 D3 CE                      ror     rsi, cl
+.text:000000014006359D 48 33 F0                      xor     rsi, rax
+
+
+
+
+enc_dpc = ror(bswap( KiWaitAlways ^ dpc) ^ timer, (char)KiWaitNever) ^ KiWaitNever
+dpc = bswap(rol(enc_dpc ^ KiWaitNever, (char)KiWaitNever) ^ timer) ^ KiWaitAlways
+
+
+undocde timer:FFFF898B10B613D0 dpc:79DA9DA68EA1C728 KiWaitNever:6AB044059FDD7AF6 KiWaitAlways:B3FBF32DE56818
+
+FF4C72783D537B88 ^ B3FBF32DE56818

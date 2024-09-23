@@ -1,0 +1,188 @@
+kd> dt _KDPC FFFF898B1033B21B
+nt!_KDPC
+   +0x000 TargetInfoAsUlong : 0x113
+   +0x000 Type             : 0x13 ''
+   +0x001 Importance       : 0x1 ''
+   +0x002 Number           : 0
+   +0x008 DpcListEntry     : _SINGLE_LIST_ENTRY
+   +0x010 ProcessorHistory : 0
+   +0x018 DeferredRoutine  : 0xfffff803`02ded770     void  nt!ExpCenturyDpcRoutine+0
+   +0x020 DeferredContext  : 0x31c30868`e07da296 Void
+   +0x028 SystemArgument1  : 0x00000000`00000003 Void
+   +0x030 SystemArgument2  : 0x00000000`34fda604 Void
+   +0x038 DpcData          : (null) 
+
+rax=fffff80302ded770 rbx=0000000000000006 rcx=ffff898b1033b21b
+rdx=31c30868e07da296 rsi=0000000000000007 rdi=ffff898b1033b21b
+rip=fffff80302ded770 rsp=fffff8030287ec88 rbp=0000000000000080
+ r8=00000000623830b0  r9=0000000001db0b00 r10=fffff80302ded770
+r11=0000000000000000 r12=00000000000000ee r13=fffff8030287ee60
+r14=fffff8030190f180 r15=fffff8030190f100
+iopl=0         nv up ei pl zr na po nc
+cs=0010  ss=0000  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+nt!ExpCenturyDpcRoutine:
+fffff803`02ded770 488bc4          mov     rax,rsp
+
+rsp = fffff8030287eb18 提升 160
+
+
+
+and     dword ptr [rsp+30h],0
+Dpc->Type = 0;
+Dpc->DeferredContext = (void *)(rand_code2 >> 8);  1DB0B
+mov     [rsp+0DAh], r8  00000000623830b0
+mov     [rsp+0D2h], DeferredContext <<  (char)r8=00000000623830b0  =  a29631c30868e07d
+mov     [rsp+8Ah], _KDPC >>   (char)r8=00000000623830b0  =  898b1033b21bffff
+Dpc->SystemArgument1 = (void *)((unsigned __int64)Dpc->SystemArgument1 ^ rand_code2);
+Dpc->SystemArgument2 = (void *)((unsigned __int64)Dpc->SystemArgument2 ^ rand_code);
+
+
+KiCustomAccessRoutine9:
+rax = 898b1033b21bffff
+rdx = 31c30868e07da296
+ecx = DeferredContext & 3 + 1
+rax >>=cl = f131620676437fff
+xor     r8, rax
+xor     r9, rax
+xor     r10, rax
+xor     r11, rax
+xor     eax, eax
+
+loop:
+sub rsp, 28
+dec edx
+jz do_expcetion:
+call kiCustom*
+do_expcetion:
+mov eax, [rdx] // 触发异常
+
+rsp = fffff8030287ea60
+
+触发异常后：
+rsp=fffff8030287d078
+rax=fffff80302ded84e rbx=fffff80302ed5d60 rcx=0000000000000001
+rdx=fffff8030287eb20 rsi=000000000033780e rdi=0000000000000000
+rip=fffff80302ded84e rsp=fffff8030287d078 rbp=000000000033780b
+ r8=0000000000000000  r9=0000000000000002 r10=0000000000000002
+r11=fffff8030287eb20 r12=fffff8030287eb20 r13=fffff8030287e828
+r14=fffff8030287d700 r15=fffff80302ab6000
+iopl=0         nv up ei ng nz na po nc
+cs=0010  ss=0018  ds=002b  es=002b  fs=0053  gs=002b             efl=00000286
+nt!ExpCenturyDpcRoutine$fin$0:
+fffff803`02ded84e 4053            push    rbx
+
+kd> dqs rdx
+fffff803`0287eb20  fffff803`0287ec88
+fffff803`0287eb28  ffff898b`1033b21b
+fffff803`0287eb30  31c30868`e07da296
+fffff803`0287eb38  00000000`623830b0
+fffff803`0287eb40  00000000`01db0b00
+fffff803`0287eb48  fffff803`02ded770 nt!ExpCenturyDpcRoutine
+fffff803`0287eb50  00000000`00000002
+fffff803`0287eb58  fffff803`00000000
+fffff803`0287eb60  00000000`00000000
+fffff803`0287eb68  00000000`00000000
+fffff803`0287eb70  00000000`00000000
+fffff803`0287eb78  00000000`00000000
+fffff803`0287eb80  019bf501`9bf5019b
+fffff803`0287eb88  9bf5019b`f5019bf5
+fffff803`0287eb90  f5019bf5`019bf501
+fffff803`0287eb98  019bf501`9bf5019b
+
+kd> dqs rdx L60
+fffff803`0287eb20  fffff803`0287ec88
+fffff803`0287eb28  ffff898b`1033b21b
+fffff803`0287eb30  31c30868`e07da296
+fffff803`0287eb38  00000000`623830b0
+fffff803`0287eb40  00000000`01db0b00
+fffff803`0287eb48  fffff803`02ded770 nt!ExpCenturyDpcRoutine
+fffff803`0287eb50  00000000`00000002  // 判断是否为2
+fffff803`0287eb58  fffff803`00000000 // DPC+0X40 =  ce3c81e3`f27ca228 = unk_addr = unk_addr >> unk_addr&3f 加密  fffe262c`480402fb
+fffff803`0287eb60  00000000`00000000 // 0e05000f`010c0a09    070c0906`08050300
+fffff803`0287eb68  00000000`00000000 // 0b020608`0d070304    020b0f01`040e0a0d
+fffff803`0287eb70  00000000`00000001 //rbp+40 循环计次变量  //开头赋值cl
+fffff803`0287eb78  00000000`00000000
+fffff803`0287eb80  019bf501`9bf5019b    00000019`9bf5019b
+fffff803`0287eb88  9bf5019b`f5019bf5 = [rbp + 6c] = 0; 00000000`f5019bf5  00000000`00000010
+fffff803`0287eb90  f5019bf5`019bf501
+fffff803`0287eb98  019bf501`9bf5019b  // KDPC+0X40 ^DeferredContext | FFFF800000000000h
+fffff803`0287eba0  00000000`00000000
+fffff803`0287eba8  1033b21b`ffff0000
+fffff803`0287ebb0  00000000`0000898b //   [rbp+8Ah] =  898b1033b21bffff (_KDPC >>   (char)r8=00000000623830b0  =  898b1033b21bffff)
+fffff803`0287ebb8  00000000`00000000
+fffff803`0287ebc0  00000000`00000000
+fffff803`0287ebc8  00000000`00000000
+fffff803`0287ebd0  00000000`00000000
+fffff803`0287ebd8  00000000`00000000
+fffff803`0287ebe0  00000000`00000000
+fffff803`0287ebe8  00000000`00000000
+fffff803`0287ebf0  31c30868`e07d0000
+fffff803`0287ebf8  00006238`30b0a296 // rbp+0DAh =  623830b0    rbp+0D2h =  DeferredContext << (char)r8=00000000623830b0  =  a29631c30868e07d
+fffff803`0287ec00  ffff898b`13e80000
+fffff803`0287ec08  fffff803`02afe573 nt!KiReadyThread+0x33
+fffff803`0287ec10  fffff803`0190f180
+fffff803`0287ec18  ffff898b`103c3000 // 6238`30b0  【rbp+0DAh】
+fffff803`0287ec20  00000000`00000000
+fffff803`0287ec28  fffff803`00000001
+fffff803`0287ec30  ffff898b`13f2c220 = rbp+0DAh =  623830b0 
+fffff803`0287ec38  fffff803`02bc0a2b nt!KiProcessThreadWaitList+0xcb
+fffff803`0287ec40  ffff898b`13f21080 // KDPC+0X40 ^DeferredContext | FFFF800000000000h
+fffff803`0287ec48  00000000`00000080
+fffff803`0287ec50  fffff803`0190f100
+fffff803`0287ec58  fffff803`02ded785 nt!ExpCenturyDpcRoutine+0x15
+fffff803`0287ec60  00000000`00000010
+fffff803`0287ec68  fffff803`0287eb20
+fffff803`0287ec70  fffff803`0287ec80
+fffff803`0287ec78  00000000`00000018
+fffff803`0287ec80  fffff803`0190f180
+fffff803`0287ec88  fffff803`02b21579 nt!KiProcessExpiredTimerList+0x169
+fffff803`0287ec90  00000000`00000006
+fffff803`0287ec98  31c30868`e07da296
+fffff803`0287eca0  00000000`00000007
+fffff803`0287eca8  ffff898b`1033b21b
+fffff803`0287ecb0  ffff898b`00400a02
+fffff803`0287ecb8  fffff803`0287ed18
+fffff803`0287ecc0  00000000`00000000
+fffff803`0287ecc8  00000000`00000007
+fffff803`0287ecd0  fffff803`02ded770 nt!ExpCenturyDpcRoutine
+fffff803`0287ecd8  ffff898b`15105080
+fffff803`0287ece0  fffff803`01912800
+fffff803`0287ece8  00008315`56434c40
+fffff803`0287ecf0  00000000`00000000
+fffff803`0287ecf8  00000000`00000000
+fffff803`0287ed00  00000000`00000000
+fffff803`0287ed08  00000000`00000000
+fffff803`0287ed10  00000000`00000000
+fffff803`0287ed18  00000000`00000000
+fffff803`0287ed20  00000000`00000000
+fffff803`0287ed28  00008315`5af7a978
+fffff803`0287ed30  00000000`00000000
+fffff803`0287ed38  ffffd2e6`a3df5363
+fffff803`0287ed40  fffff803`0190f180
+fffff803`0287ed48  fffff803`01912800
+fffff803`0287ed50  fffff803`0190f180
+fffff803`0287ed58  00000000`000101ee
+fffff803`0287ed60  00000000`0000001a
+fffff803`0287ed68  fffff803`0287ee80
+fffff803`0287ed70  fffff803`019147c8
+fffff803`0287ed78  fffff803`02b202d9 nt!KiRetireDpcList+0x4e9
+fffff803`0287ed80  00000000`00000010
+fffff803`0287ed88  00000000`00989680
+fffff803`0287ed90  00000000`000101d6
+fffff803`0287ed98  00000000`000000ee
+fffff803`0287eda0  00000000`00000000
+fffff803`0287eda8  00000000`00000000
+fffff803`0287edb0  000101ee`00000001
+fffff803`0287edb8  00000000`000101d6
+fffff803`0287edc0  fffff803`01912800
+fffff803`0287edc8  00000002`00000007
+fffff803`0287edd0  00000000`0000002a
+fffff803`0287edd8  00000004`075b3c81
+fffff803`0287ede0  00000000`00000002
+fffff803`0287ede8  fffff803`0190f180
+fffff803`0287edf0  00000004`075b3c81
+fffff803`0287edf8  ffff898b`15105080
+fffff803`0287ee00  000101d7`00000000
+fffff803`0287ee08  00000000`c6000000
+fffff803`0287ee10  00000000`00000000
+fffff803`0287ee18  00000000`00000000
