@@ -20,29 +20,11 @@ uint64_t KiWaitAlways = 0x00b3fbf32de56818;
 
 uint8_t move_table[16] { 0x09, 0x0A, 0x0C, 0x01, 0x0F, 0x00, 0x05, 0x0E, 0x04, 0x03, 0x07, 0x0D, 0x08, 0x06, 0x02, 0x0B };
  
-<<<<<<< HEAD
-unsigned int btc(unsigned int n, unsigned int pos) {
-  // 测试并翻转 pos 位
-  // pos 是从 0 开始计算的
-  unsigned int bit = (n >> pos) & 1;  // 取出 pos 位的值
-  printf("原来的第 %u 位是: %u\n", pos, bit);  // 打印测试位的值
-  n ^= (1U << pos);  // 翻转 pos 位
-  return n;
-}
-unsigned long long btc64(unsigned long long n, unsigned long long  pos) {
-  // 测试并翻转 pos 位
-  // pos 是从 0 开始计算的
-  unsigned long bit_pos = n % 64;  // 计算位位置，模 64 是因为寄存器是 64 位
-  unsigned int bit = (n >> pos) & 1;  // 取出 pos 位的值
-  //printf("原来的第 %u 位是: %u\n", pos, bit);  // 打印测试位的值
-  n ^= (1ULL << pos);  // 翻转 pos 位
-=======
 
 unsigned long long btc64(unsigned long long n, unsigned long long  pos) 
 {
   unsigned long bit_pos = pos % 64;  
   n ^= (1ULL << bit_pos);
->>>>>>> master
   return n;
 }
 
@@ -168,18 +150,11 @@ int main()
   // 解密context体
   if (PGDecodeKey != 0)
   {
-<<<<<<< HEAD
-    int count = *(int*)(tmp_data + 0xc4);
-    for (int i = count ; i >= 0xc8 / 8; --i)
-    {
-      pg_ctx_ptr[i] ^= PGDecodeKey;
-=======
     uint64_t* ctx_body =(uint64_t*)( (char*)pg_ctx_ptr + 0xc0);
     int count = *(int*)(tmp_data + 0xc4);
     for (int i = count ; i >= 0; --i)
     {
       ctx_body[i] ^= PGDecodeKey;
->>>>>>> master
       PGDecodeKey = _rotr64(PGDecodeKey, i);
       PGDecodeKey = btc64(PGDecodeKey, PGDecodeKey);
     }
