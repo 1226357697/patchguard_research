@@ -152,7 +152,7 @@ int main()
   {
     uint64_t* ctx_body =(uint64_t*)( (char*)pg_ctx_ptr + 0xc0);
     int count = *(int*)(tmp_data + 0xc4);
-    for (int i = count ; i >= 0; --i)
+    for (int i = count ; i > 0; --i)
     {
       ctx_body[i] ^= PGDecodeKey;
       PGDecodeKey = _rotr64(PGDecodeKey, i);
