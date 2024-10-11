@@ -15,6 +15,12 @@ uint64_t SystemArgument2 = 0xbbf0a934;
 uint64_t PGContextPtr = 0xfca74a37ac1fd4e3;
 uint64_t PGDecodeKey = 0;
 
+//uint64_t DeferredContext = 0x8e6f30fcae2830d0;
+//uint64_t SystemArgument1 = 0x00000001;
+//uint64_t SystemArgument2 = 0x10c274d;
+//uint64_t PGContextPtr = 0x7310b977bc2932f3;
+//uint64_t PGDecodeKey = 0;
+
 uint64_t KiWaitNever = 0x6ab044059fdd7af6;
 uint64_t KiWaitAlways = 0x00b3fbf32de56818;
 
@@ -32,6 +38,7 @@ buffer_t get_enc_context_data()
 {
   buffer_t data;
   fs::path enc_data_path("../note/解密算法测试/pg_undec.bin");
+  //fs::path enc_data_path("D:\\pg_ctx930.bin");
   std::ifstream ifs(enc_data_path, std::ios::binary);
   if (ifs.is_open())
   {
@@ -45,7 +52,21 @@ buffer_t get_enc_context_data()
 
 void write_dec_conetxt_data(buffer_t data)
 {
+  //fs::path enc_data_path("D:\\test_pg_undec.bin");
+  
   fs::path enc_data_path("../note/解密算法测试/test_pg_undec.bin");
+  std::ofstream ifs(enc_data_path, std::ios::binary);
+  if (ifs.is_open())
+  {
+    ifs.write(data.data(), data.size());
+  }
+}
+
+void write_denc_conetxt_data(buffer_t data)
+{
+  //fs::path enc_data_path("D:\\test_pg_unenc.bin");
+
+  fs::path enc_data_path("../note/解密算法测试/test_pg_unenc.bin");
   std::ofstream ifs(enc_data_path, std::ios::binary);
   if (ifs.is_open())
   {
@@ -107,6 +128,7 @@ int main()
 
     if (i == 25)
     {
+      //继续 解密context body
       #define CONST_XOR_VALUE 0x17042898A40898A4ULL
       uint64_t value = CONST_XOR_VALUE >> 55 | CONST_XOR_VALUE << 9;
       if ((value ^ pg_ctx_ptr[0]) != 0)
@@ -127,7 +149,7 @@ int main()
       end2_loop = 1;
     }
   }
-  //write_dec_conetxt_data(enc_ctx);
+  write_dec_conetxt_data(enc_ctx);
   printf("解密context第一次完毕\n");
   // 可以简化成 85131481131482E
   PGDecodeKey = 0x6244935FAD1B6FF5 ^ 0x6A15A217BC2A27DB ^ pg_ctx_ptr[0] ;
@@ -162,6 +184,6 @@ int main()
 
 
   printf("解密context第二次完毕\n");
-
+  write_denc_conetxt_data(enc_ctx);
   return 0;
 }

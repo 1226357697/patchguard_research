@@ -29,3 +29,167 @@ ExpTimerDpcRoutine  这个函数的PG常量没有加密
 ExpCenturyDpcRoutine 本次解密是该函数触发的PG
 CmpAppendDllSection 
 
+
+
+PG_CTX和Page_Begin间隙最多0x7FF：
+ v43 = ((unsigned __int16)(((v42 ^ v41) * (unsigned __int128)0x7010008004002001ui64) >> 64) ^ (unsigned __int16)(8193 * (v42 ^ v41))) & 0x7FF
+
+PG： 检查的方向
+	0   : A generic data region
+	1   : Modification of a function or .pdata
+	2   : A processor IDT
+	3   : A processor GDT
+	4   : Type 1 process list corruption
+	5   : Type 2 process list corruption
+	6   : Debug routine modification
+	7   : Critical MSR modification
+	8   : Object type
+	9   : A processor IVT
+	a   : Modification of a system service function
+	b   : A generic session data region
+	c   : Modification of a session function or .pdata
+	d   : Modification of an import table
+	e   : Modification of a session import table
+	f   : Ps Win32 callout modification
+	10  : Debug switch routine modification
+	11  : IRP allocator modification
+	12  : Driver call dispatcher modification
+	13  : IRP completion dispatcher modification
+	14  : IRP deallocator modification
+	15  : A processor control register
+	16  : Critical floating point control register modification
+	17  : Local APIC modification
+	18  : Kernel notification callout modification
+	19  : Loaded module list modification
+	1a  : Type 3 process list corruption
+	1b  : Type 4 process list corruption
+	1c  : Driver object corruption
+	1d  : Executive callback object modification
+	1e  : Modification of module padding
+	1f  : Modification of a protected process
+	20  : A generic data region
+	21  : A page hash mismatch
+	22  : A session page hash mismatch
+	23  : Load config directory modification
+	24  : Inverted function table modification
+	25  : Session configuration modification
+	26  : An extended processor control register
+	27  : Type 1 pool corruption
+	28  : Type 2 pool corruption
+	29  : Type 3 pool corruption
+	2a  : Type 4 pool corruption
+	2b  : Modification of a function or .pdata
+	2c  : Image integrity corruption
+	2d  : Processor misconfiguration
+	2e  : Type 5 process list corruption
+	2f  : Process shadow corruption
+	30  : Retpoline code page corruption
+	101 : General pool corruption
+	102 : Modification of win32k.sys
+
+
+PG上下文的地址信息
+kd> dt _KDPC FFFF898B1032895F
+nt!_KDPC
+   +0x000 TargetInfoAsUlong : 0x113
+   +0x000 Type             : 0x13 ''
+   +0x001 Importance       : 0x1 ''
+   +0x002 Number           : 0
+   +0x008 DpcListEntry     : _SINGLE_LIST_ENTRY
+   +0x010 ProcessorHistory : 0
+   +0x018 DeferredRoutine  : 0xfffff803`02bb2030     void  nt!KiBalanceSetManagerDeferredRoutine+0
+   +0x020 DeferredContext  : 0xdc4d75de`74a8633b Void
+   +0x028 SystemArgument1  : 0x00000000`00000001 Void
+   +0x030 SystemArgument2  : 0x00000000`37d14855 Void
+   +0x038 DpcData          : (null) 
+kd> DQ _KDPC FFFF898B1032895F
+Couldn't resolve error at '_KDPC FFFF898B1032895F'
+kd> DQ FFFF898B1032895F
+ffff898b`1032895f  00000000`00000113 00000000`00000000
+ffff898b`1032896f  00000000`00000000 fffff803`02bb2030
+ffff898b`1032897f  dc4d75de`74a8633b 00000000`00000001
+ffff898b`1032898f  00000000`37d14855 00000000`00000000
+ffff898b`1032899f  2bb2fc55`63a84360 794aca52`ec8ddaf4
+ffff898b`103289af  b1a72d3d`aba285a5 d1751bac`1c2619f3
+ffff898b`103289bf  6f890c4c`dd3a5186 4661030c`db3c018d
+ffff898b`103289cf  af6d7b6f`65de18c5 ec698348`a4dc10dc
+kd> DB FFFF898B1700205B
+ffff898b`1700205b  43 fb 57 ba ef 85 0f b8-42 e7 eb 83 db 61 0b da  C.W.....B....a..
+ffff898b`1700206b  5f f5 16 ff d5 23 2a db-08 0a b1 81 72 df 8d 5a  _....#*.....r..Z
+ffff898b`1700207b  1d 76 c6 ce d4 2e c4 c5-d7 ac 25 fb 43 6e a7 9a  .v........%.Cn..
+ffff898b`1700208b  5c 70 fe fb 9b d2 65 91-81 63 96 dd 09 25 bf 0c  \p....e..c...%..
+ffff898b`1700209b  c6 0b 7c 16 a2 a6 ee 90-25 6b 6f 1a 55 2b 15 09  ..|.....%ko.U+..
+ffff898b`170020ab  bc 32 08 be 3f 49 9b 36-05 87 74 7a 5a 48 d7 be  .2..?I.6..tzZH..
+ffff898b`170020bb  73 2f a9 57 75 24 b4 85-ac 0d b3 30 0c e5 53 c4  s/.Wu$.....0..S.
+ffff898b`170020cb  00 b3 bd c7 3a d7 12 7d-27 11 cb 56 b8 ba 36 3d  ....:..}'..V..6=
+kd> !PTE FFFF898B1700205B
+                                           VA ffff898b1700205b
+PXE at FFFF8743A1D0E898    PPE at FFFF8743A1D13160    PDE at FFFF8743A262C5C0    PTE at FFFF8744C58B8010
+contains 0A00000000E38863  contains 0A00000000E3B863  contains 0A000000320FC863  contains 0A00000032A88863
+pfn e38       ---DA--KWEV  pfn e3b       ---DA--KWEV  pfn 320fc     ---DA--KWEV  pfn 32a88     ---DA--KWEV
+
+kd> !address FFFF898B1700205B
+Mapping user range ...
+Mapping system range ...
+Mapping non addressable range ...
+Mapping page tables...
+Mapping hyperspace...
+Mapping HAL reserved range...
+Mapping User Probe Area...
+Mapping system shared page...
+Mapping system cache working set...
+Mapping loader mappings...
+Mapping system PTEs...
+Mapping system paged pool...
+Mapping session space...
+Mapping dynamic system space...
+Mapping PFN database...
+Mapping non paged pool...
+Mapping VAD regions...
+Mapping module regions...
+Mapping process, thread, and stack regions...
+Mapping system cache regions...
+
+
+Usage:                  
+Base Address:           ffff8800`00000000
+End Address:            ffffb850`13800000
+Region Size:            00003050`13800000
+VA Type:                SystemRange
+kd> !pool FFFF898B1700205B
+Pool page ffff898b1700205b region is Nonpaged pool
+*ffff898b17002000 : large page allocation, tag is FOCX, size is 0x76000 bytes
+		Pooltag FOCX : File System Run Time File Object Context structure, Binary : nt!fsrtl
+
+PG执行流程：
+1. 触发DPC, 以下回调中的一个
+	// PopThermalZoneDpc
+	// KiBalanceSetManagerDeferredRoutine
+	// IopIrpStackProfilerDpcRoutine
+	// IopTimerDispatch
+	// ExpCenturyDpcRoutine
+	// ExpTimeZoneDpcRoutine
+	// ExpTimeRefreshDpcRoutine
+	// CmpLazyFlushDpcRoutine
+	// CmpEnableLazyFlushDpcRoutine
+	// ExpTimerDpcRoutine
+2. 判断是否是PG触发条件，当 (INT64)dpc->DeferredContext >> 47 结果不等于0 且不等于-1，触发异常，进入异常处理回调进行PG_CTX第一层解密
+3. 执行PG_CTX中的CmpAppendDllSection副本进行自解密(第二层解密)
+4. 执行 patchguard_entry_140B101A0, 自校验逻辑可能在这个函数里
+5. ExQueueWorkItem(PG_CTX.WorkItem , DelayedWorkQueue), 
+	kd> dt _WORK_QUEUE_ITEM  rax+798h
+	nt!_WORK_QUEUE_ITEM
+	+0x000 List             : _LIST_ENTRY [ 0x00000000`00000000 - 0x00000000`00000000 ]
+	+0x010 WorkerRoutine    : 0xffff898b`1202b940     void  +ffff898b1202b940
+	+0x018 Parameter        : 0xffff898b`120101bf Void
+	WorkerRoutine是 FsRtlUninitializeSmallMcb副本
+	Parameter是PG_CTX地址
+6. 等待workItem执行FsRtlUninitializeSmallMcb副本回调
+7. FsRtlUninitializeSmallMcb中调用 FsRtlUninitializeSmallMcbEx中是主要校验逻辑，里面还套了很多子校验。该函数还会重新申请新的上下文，申请内存的方式有3种, 释放方式也不一样，并且使用KeInsertQueueApc函数插入APC/DPC等待下次执行。
+	PG上下文内存一共有三种分配内存的方式：
+	1. MmAllocateIndependentPages
+	2. ExAllocatePool2
+	3. MmAllocatePagesForMdlEx
+
+8. 最后由 FsRtlUninitializeSmallMcb来释放当前上下文的内存。
+9. 无线循环此流程
