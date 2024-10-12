@@ -1,10 +1,12 @@
 #include <ntifs.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include "ntinternl.h"
 
 ULONGLONG* pKiWaitNever = (ULONGLONG*)0xfffff80303028710;
 ULONGLONG* pKiWaitAlways = (ULONGLONG*)0xfffff803030288f8;
 
+bool debug = false;
 
 typedef struct _SameThreadPassiveFlags
 {
@@ -61,9 +63,14 @@ bool guess_pg(PKTIMER timer)
   if(SpecialBit != 0 && SpecialBit != -1)
     return true;
 
-  //SpecialBit = (INT64)dpc->DeferredRoutine >> 47;
-  //if (SpecialBit != 0 && SpecialBit != -1)
-  //  return true;
+  uint64_t pg_ptr_xor = *(uint64_t*)(dpc+1);
+  if (pg_ptr_xor!= 0 && dpc->DeferredContext!= NULL 
+  && !MmIsAddressValid( dpc->DeferredContext) && MmIsAddressValid((PVOID)((uint64_t)dpc->DeferredContext ^ pg_ptr_xor | 0xFFFF800000000000)) )
+  {
+    log_i("dpc:%p is not general pg xor\n", dpc);
+    return true;
+  }
+
   return false;
 }
 
@@ -98,11 +105,20 @@ int  FindWorkerITemThread()
       //ULONG returnLenght = 0;
       SameThreadPassiveFlags* falgs = (SameThreadPassiveFlags*)(((char*)thead) + 0x6e4);
       UCHAR WaitReason = *(UCHAR*)(((char*)thead) + 0x283);
-      if (ExpWorkerThread == SatrtAddress && falgs->ActiveExWorker && WaitReason == 4)
+      if (ExpWorkerThread == SatrtAddress && falgs->ActiveExWorker)
       {
-        log_i("guess pg worker thead: %p id: %d StartAddress: %p status: %08X\n", thead, i, SatrtAddress, status);
+        
+        if (debug && WaitReason != WrQueue)
+        {
+          log_i("guess pg worker thead: %p id: %d StartAddress: %p reason: %d\n", thead, i, SatrtAddress, WaitReason);
+
+        }
+        if (WaitReason == 4)
+        {
+          log_i("guess pg worker thead: %p id: %d StartAddress: %p hint hint hint hint hint\n", thead, i, SatrtAddress);
+          count++;
+        }
         //__debugbreak();
-        count++;
       }
     }
 
@@ -135,7 +151,11 @@ int  FindDPC()
 
       PKTIMER timer = CONTAINING_RECORD(list_entry, KTIMER, TimerListEntry);
 
-      // log_i("undocde timer:%p dpc:%p(%p) guess_pg:%d\n", timer, timer->Dpc, decode_dpc(timer), guess_pg(timer) ? 1:0);
+      if (debug)
+      {
+        log_i("undocde timer:%p dpc:%p(%p) guess_pg:%d\n", timer, timer->Dpc, decode_dpc(timer), guess_pg(timer) ? 1:0);
+
+      }
       if (guess_pg(timer))
       {
         log_i("guess pg timer:%p dpc:%p(%p)\n", timer, timer->Dpc, decode_dpc(timer));
@@ -167,6 +187,7 @@ VOID WorkerThread( _In_ PVOID StartContext )
   working = true;
   END = false;
 
+  int try_count = 0;
   while (working)
   {
     int dpc_count = FindDPC();
@@ -177,6 +198,19 @@ VOID WorkerThread( _In_ PVOID StartContext )
 
     log_i("PG total count: %d \n", dpc_count + worker_thread_coubt);
 
+
+    debug = false;
+    if ((dpc_count + worker_thread_coubt) == 0)
+    {
+      try_count++;
+
+      if (try_count == 3)
+      {
+        //__debugbreak();
+        try_count = 0;
+        debug = true;
+      }
+    }
     KSleep(1000);
   }
 
