@@ -1,4 +1,4 @@
-#include <ntifs.h>
+﻿#include <ntifs.h>
 #include <stdarg.h>
 #include <stdint.h>
 static ULONG log_i(PCCH fmt, ...)
@@ -11,49 +11,55 @@ static ULONG log_i(PCCH fmt, ...)
   return ret;
 }
 
-
-typedef struct _LARGE_PAGE_INFO {
-  PVOID  BaseAddress;
-  SIZE_T RegionSize;
-} LARGE_PAGE_INFO, * PLARGE_PAGE_INFO;
-#define POOL_BIG_TABLE_ENTRY_FREE 0x1
-
-typedef struct _POOL_TRACKER_BIG_PAGES
+typedef struct _SameThreadPassiveFlags
 {
-    void* Va;// Offset=0x0 Size=0x8
-    unsigned long Key;// Offset=0x8 Size=0x4
-    unsigned long Pattern : 8;// Offset=0xc Size=0x4 BitOffset=0x0 BitSize=0x8
-    unsigned long PoolType : 12;// Offset=0xc Size=0x4 BitOffset=0x8 BitSize=0xc
-    unsigned long SlushSize : 12;// Offset=0xc Size=0x4 BitOffset=0x14 BitSize=0xc
-    unsigned int NumberOfBytes;// Offset=0x10 Size=0x8
-}POOL_TRACKER_BIG_PAGES;
+  ULONG ActiveExWorker : 1;                                         //0x6e4
+  ULONG MemoryMaker : 1;                                            //0x6e4
+  ULONG StoreLockThread : 2;                                        //0x6e4
+  ULONG ClonedThread : 1;                                           //0x6e4
+  ULONG KeyedEventInUse : 1;                                        //0x6e4
+  ULONG SelfTerminate : 1;                                          //0x6e4
+  ULONG RespectIoPriority : 1;                                      //0x6e4
+  ULONG ActivePageLists : 1;                                        //0x6e4
+  ULONG SecureContext : 1;                                          //0x6e4
+  ULONG ZeroPageThread : 1;                                         //0x6e4
+  ULONG WorkloadClass : 1;                                          //0x6e4
+  ULONG ReservedSameThreadPassiveFlags : 20;                        //0x6e4
+}SameThreadPassiveFlags;
 
-
-LONG* PoolBigPageTableSize = (LONG*)0xfffff80302ee7e58;
-POOL_TRACKER_BIG_PAGES* PoolBigPageTable = (POOL_TRACKER_BIG_PAGES*)0xfffff80302ee7e50;
-
-VOID EnumerateLargePageNonPagedMemory()
+typedef struct _ENODE// Size=0x1c0 (Id=96)
 {
-  for (int i = 0; i < *PoolBigPageTableSize / sizeof(POOL_TRACKER_BIG_PAGES); i++)
-  {
-    POOL_TRACKER_BIG_PAGES* page = &PoolBigPageTable[i];
+  //struct _KNODE Ncb;// Offset=0x0 Size=0x180
+  char Ncb[0x180];
+  struct _WORK_QUEUE_ITEM HotAddProcessorWorkItem;// Offset=0x180 Size=0x20
+}ENODE;
 
-    if (((uint64_t)page->Va & POOL_BIG_TABLE_ENTRY_FREE) ==0)
-    {
-      log_i("%d page: %p type:%d NumberOfBytes:%08X \n", i, page->Va, page->PoolType, page->NumberOfBytes);
-    }
+typedef struct _EX_WORK_QUEUE// Size=0x2e0 (Id=1153)
+{
+  // struct _KPRIQUEUE WorkPriQueue;// Offset=0x0 Size=0x2b0
+  char WorkPriQueue[0x2b0];
+  struct _EX_PARTITION* Partition;// Offset=0x2b0 Size=0x8
+  struct _ENODE* Node;// Offset=0x2b8 Size=0x8
+  unsigned long WorkItemsProcessed;// Offset=0x2c0 Size=0x4
+  unsigned long WorkItemsProcessedLastPass;// Offset=0x2c4 Size=0x4
+  long ThreadCount;// Offset=0x2c8 Size=0x4
+  long MinThreads : 31;// Offset=0x2cc Size=0x4 BitOffset=0x0 BitSize=0x1f
+  unsigned long TryFailed : 1;// Offset=0x2cc Size=0x4 BitOffset=0x1f BitSize=0x1
+  long MaxThreads;// Offset=0x2d0 Size=0x4
+  enum _EXQUEUEINDEX QueueIndex;// Offset=0x2d4 Size=0x4
+  struct _KEVENT* AllThreadsExitedEvent;// Offset=0x2d8 Size=0x8
+}EX_WORK_QUEUE;
 
-  }
-}
+EX_WORK_QUEUE* ExWorkerQueue = (EX_WORK_QUEUE*)0xffff898b102899a0;
 
 
 VOID DriverUnload(PDRIVER_OBJECT DriverObject)
 {
 }
 
+void* ExpWorkerThread = (void*)0xfffff80302b72de0;
 NTSTATUS DriverEntry(PDRIVER_OBJECT driver_obj, PUNICODE_STRING registerPath)
 {
-  EnumerateLargePageNonPagedMemory();
   driver_obj->DriverUnload = DriverUnload;
   return STATUS_UNSUCCESSFUL;
 }

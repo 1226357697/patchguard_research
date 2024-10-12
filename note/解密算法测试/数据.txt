@@ -193,3 +193,74 @@ PG执行流程：
 
 8. 最后由 FsRtlUninitializeSmallMcb来释放当前上下文的内存。
 9. 无线循环此流程
+
+
+kd> kB
+ # RetAddr               : Args to Child                                                           : Call Site
+00 ffff898b`120100a0     : 00000000`00000010 00000000`00000200 fffff803`0287d018 00000000`00000018 : 0xffff898b`1202a3d2
+01 00000000`00000010     : 00000000`00000200 fffff803`0287d018 00000000`00000018 ffff898b`162cb2a0 : 0xffff898b`120100a0 // CmpAppendDllSection
+02 00000000`00000200     : fffff803`0287d018 00000000`00000018 ffff898b`162cb2a0 fffff803`02dedaab : 0x10
+03 fffff803`0287d018     : 00000000`00000018 ffff898b`162cb2a0 fffff803`02dedaab 00000000`00000000 : 0x200
+04 00000000`00000018     : ffff898b`162cb2a0 fffff803`02dedaab 00000000`00000000 fffff803`060e35f9 : 0xfffff803`0287d018
+05 ffff898b`162cb2a0     : fffff803`02dedaab 00000000`00000000 fffff803`060e35f9 00000000`00000018 : 0x18
+06 fffff803`02dedaab     : 00000000`00000000 fffff803`060e35f9 00000000`00000018 00000000`00000000 : 0xffff898b`162cb2a0
+07 fffff803`02c5153b     : 00000000`00000001 fffff803`0287eb20 fffff803`02879000 fffff803`0287f000 : nt!ExpCenturyDpcRoutine$fin$0+0x25d
+08 fffff803`02c7eb6f     : fffff803`0287eb20 fffff803`0287d660 00000000`00000000 fffff803`0287eb00 : nt!_C_specific_handler+0x1ab
+09 fffff803`02b7b2dd     : 00000000`00000000 fffff803`0287eaf0 fffff803`0287d660 fffff803`0287eb20 : nt!RtlpExecuteHandlerForUnwind+0xf
+0a fffff803`02c5147f     : fffff803`02ed5d60 fffff803`00000001 fffff803`0287eb20 fffff803`0287f000 : nt!RtlUnwindEx+0x52d
+0b fffff803`02c7eaef     : fffff803`0287eb20 fffff803`0287de30 00000000`00000000 00000000`0010001f : nt!_C_specific_handler+0xef
+0c fffff803`02b78df5     : 00000000`00000000 00000000`00000000 fffff803`0287de30 00007fff`ffff0000 : nt!RtlpExecuteHandlerForException+0xf
+0d fffff803`02b7d38e     : fffff803`0287e828 fffff803`0287e570 fffff803`0287e828 ffff898b`1033b21b : nt!RtlDispatchException+0x4a5
+0e fffff803`02c87c1d     : 00000000`00000000 00000000`00000000 ffff898b`14703080 00000000`00000000 : nt!KiDispatchException+0x16e
+0f fffff803`02c839a2     : 00000000`00000000 ffff898b`133d3c38 ffff898b`10eb24a0 fffff803`04b379c1 : nt!KiExceptionDispatch+0x11d
+10 fffff803`02c7fdbd     : ffffffff`ffb4c3e0 00000002`9c7751c0 fffff803`00000030 00000000`00000000 : nt!KiGeneralProtectionFault+0x322
+11 fffff803`02c802fd     : 00000000`00000000 ffff898b`132e6eb0 ffff898b`1096c8a0 ffff898b`132d2800 : nt!KiCustomRecurseRoutine1+0xd
+12 fffff803`02c8023d     : 00000000`00000000 fffff803`02b21308 00000000`000008c4 fffff803`0287ebd0 : nt!KiCustomRecurseRoutine0+0xd
+13 fffff803`02c80272     : ffff898b`10ff1000 fffff803`06977acd ffff898b`00001000 fffff803`00000000 : nt!KiCustomRecurseRoutine9+0xd
+14 fffff803`02ded80b     : 00000000`00000000 ffff898b`109e4040 00000000`00000000 fffff803`0190f180 : nt!KiCustomAccessRoutine9+0x22
+15 fffff803`02b21579     : 00000000`00000006 ec6b24ea`3b31f71a 00000000`00000006 ffff898b`1033b21b : nt!ExpCenturyDpcRoutine+0x9b
+16 fffff803`02b202d9     : 00000000`00000010 00000000`00989680 00000000`0000a71e 00000000`00000036 : nt!KiProcessExpiredTimerList+0x169
+17 fffff803`02c7cd05     : 00000000`00000000 fffff803`0190f180 fffff803`02a81cf0 00000169`7c33a170 : nt!KiRetireDpcList+0x4e9
+18 fffff803`02c7caf0     : ffffffff`ffffffb7 fffff803`02c7c391 00000000`01000010 00000000`00000286 : nt!KxRetireDpcList+0x5
+19 fffff803`02c7c3a5     : 00000169`7c33a170 fffff803`02c77d41 00000000`00000001 fffff681`72a61b80 : nt!KiDispatchInterruptContinue
+1a fffff803`02c77d41     : 00000000`00000001 fffff681`72a61b80 fffff803`02a81cf0 00000000`00000000 : nt!KiDpcInterruptBypass+0x25
+1b 00007ffb`2ad1ba3d     : 00000067`74bfe8a0 00000000`00000000 00000169`7c33a1d0 00000169`7aee3170 : nt!KiInterruptDispatchNoLockNoEtw+0xb1
+1c 00000067`74bfe8a0     : 00000000`00000000 00000169`7c33a1d0 00000169`7aee3170 00000169`7acab080 : 0x00007ffb`2ad1ba3d
+1d 00000000`00000000     : 00000169`7c33a1d0 00000169`7aee3170 00000169`7acab080 00007ffb`2ad182a4 : 0x00000067`74bfe8a0
+kd> bl
+     0 e Disable Clear  ffff898b`12010001 e 1 0001 (0001) CmpAppendDllSection
+     1 e Disable Clear  ffff898b`1201009e e 1 0001 (0001) CmpAppendDllSection+0x9d
+
+执行中的PGWorkItem, 此时还没有挂DPC
+THREAD ffff898b10c31040  Cid 0004.01b8  Teb: 0000000000000000 Win32Thread: 0000000000000000 WAIT: (DelayExecution) KernelMode Non-Alertable
+	ffffffffffffffff  NotificationEvent
+Not impersonating
+DeviceMap                 ffffe40208a14b40
+Owning Process            ffff898b1028f040       Image:         System
+Attached Process          N/A            Image:         N/A
+Wait Start TickCount      71778          Ticks: 2772 (0:00:00:43.312)
+Context Switch Count      11927          IdealProcessor: 0             
+UserTime                  00:00:00.000
+KernelTime                00:00:00.359
+Win32 Start Address nt!ExpWorkerThread (0xfffff80302b72de0)
+Stack Init fffff681704fbc90 Current fffff681704fab60
+Base fffff681704fc000 Limit fffff681704f6000 Call 0000000000000000
+Priority 12 BasePriority 12 PriorityDecrement 0 IoPriority 2 PagePriority 5
+Child-SP          RetAddr               : Args to Child                                                           : Call Site
+fffff681`704faba0 fffff803`02af205d     : fffff803`00000001 fffff681`fffffffe fffff803`0000000b 00000000`00000002 : nt!KiSwapContext+0x76
+fffff681`704face0 fffff803`02af0ee4     : ffff898b`10c31040 00000000`00000000 00000000`000242be 00000000`00000000 : nt!KiSwapThread+0xbfd
+fffff681`704fad80 fffff803`02aebca0     : ffff898b`00000092 ffff898b`00000000 fffff681`00000000 0000000xffff898b00`00000002 : nt!KiCommitThreadWait+0x144
+fffff681`704fae20 ffff898b`12012dcb     : 00000000`00000000 fffff803`00000000 fffff681`704fb0c0 00000000`00000002 : nt!KeDelayExecutionThread+0x4c0
+fffff681`704faea0 00000000`00000000     : fffff803`00000000 fffff681`704fb0c0 00000000`00000002 ffff898b`10c6f730 : `12012dcb
+
+ffff898b`12012dcb 就是FsRtlMdlReadCompleteDevEx中的代码
+kd> !pool 0xffff898b`12012dcb
+Pool page ffff898b12012dcb region is Nonpaged pool
+*ffff898b12010000 : large page allocation, tag is AlSc, size is 0x8b000 bytes
+		Pooltag AlSc : ALPC section, Binary : nt!alpc
+
+
+清除PG的想法：
+1. 遍历DPC，如何可以到PG挂的DPC，就直接移除
+2. 没有找到DPC,就遍历 &ExWorkerQueue[QueueType]; 工作队列，拿到 WorkItem = CONTAINING_RECORD(Entry, WORK_QUEUE_ITEM, List)， 判断 WorkerRoutine或者Parameter是不是PG插入的WorkItem，是就移除。
+3. 最后还是没有找到的话，遍历系统线程，当Thread->ActiveExWorker为1，且入口为ExpWorkerThread，则做进一步处理，栈回溯等等确实是否是执行Pg WotkItem的线程，移除。
