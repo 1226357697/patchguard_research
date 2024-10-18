@@ -175,7 +175,7 @@ PG执行流程：
 	// ExpTimerDpcRoutine
 2. 判断是否是PG触发条件，当 (INT64)dpc->DeferredContext >> 47 结果不等于0 且不等于-1，触发异常，进入异常处理回调进行PG_CTX第一层解密
 3. 执行PG_CTX中的CmpAppendDllSection副本进行自解密(第二层解密)
-4. 执行 patchguard_entry_140B101A0, 自校验逻辑可能在这个函数里
+4. 执行 patchguard_entry_140B101A0, 自校验逻辑可能在这个函数里, 一些校验逻辑也在，修改ExQueueWorkItem代码也会蓝屏。
 5. ExQueueWorkItem(PG_CTX.WorkItem , DelayedWorkQueue), 
 	kd> dt _WORK_QUEUE_ITEM  rax+798h
 	nt!_WORK_QUEUE_ITEM
@@ -264,3 +264,580 @@ Pool page ffff898b12012dcb region is Nonpaged pool
 1. 遍历DPC，如何可以到PG挂的DPC，就直接移除
 2. 没有找到DPC,就遍历 &ExWorkerQueue[QueueType]; 工作队列，拿到 WorkItem = CONTAINING_RECORD(Entry, WORK_QUEUE_ITEM, List)， 判断 WorkerRoutine或者Parameter是不是PG插入的WorkItem，是就移除。
 3. 最后还是没有找到的话，遍历系统线程，当Thread->ActiveExWorker为1，且入口为ExpWorkerThread，则做进一步处理，栈回溯等等确实是否是执行Pg WotkItem的线程，移除。
+
+
+
+PG保存的函数
+ffff898b`120102cc  fffff803`02aecd90 nt!ExAcquireResourceSharedLite
+ffff898b`120102d4  fffff803`02aec9b0 nt!ExAcquireResourceExclusiveLite
+ffff898b`120102dc  fffff803`02e23010 nt!ExAllocatePoolWithTag
+ffff898b`120102e4  fffff803`02e230a0 nt!ExFreePool
+ffff898b`120102ec  fffff803`03113430 nt!ExMapHandleToPointer
+ffff898b`120102f4  fffff803`02b74710 nt!ExQueueWorkItem
+ffff898b`120102fc  fffff803`02aec230 nt!ExReleaseResourceLite
+ffff898b`12010304  fffff803`031d9570 nt!ExUnlockHandleTableEntry
+ffff898b`1201030c  fffff803`02aef3d0 nt!ExAcquirePushLockExclusiveEx
+ffff898b`12010314  fffff803`02aef160 nt!ExReleasePushLockExclusiveEx
+ffff898b`1201031c  fffff803`02aef590 nt!ExAcquirePushLockSharedEx
+ffff898b`12010324  fffff803`02aefe10 nt!ExReleasePushLockSharedEx
+ffff898b`1201032c  fffff803`02abccc0 nt!KeAcquireInStackQueuedSpinLockAtDpcLevel
+ffff898b`12010334  fffff803`02bb68e0 nt!ExAcquireSpinLockSharedAtDpcLevel
+ffff898b`1201033c  fffff803`02c75cc0 nt!KeBugCheckEx
+ffff898b`12010344  fffff803`02aeb7e0 nt!KeDelayExecutionThread
+ffff898b`1201034c  fffff803`02b6cb20 nt!KeEnterCriticalRegionThread
+ffff898b`12010354  fffff803`02aee880 nt!KeLeaveCriticalRegion
+ffff898b`1201035c  fffff803`02b1bf10 nt!KeEnterGuardedRegion
+ffff898b`12010364  fffff803`02b1bed0 nt!KeLeaveGuardedRegion
+ffff898b`1201036c  fffff803`02aee560 nt!KxReleaseQueuedSpinLock
+ffff898b`12010374  fffff803`02af8090 nt!ExReleaseSpinLockSharedFromDpcLevel
+ffff898b`1201037c  fffff803`02b13610 nt!KeRevertToUserGroupAffinityThread
+ffff898b`12010384  fffff803`02be70c0 nt!KeProcessorGroupAffinity
+ffff898b`1201038c  fffff803`02b5e280 nt!KeInitializeEnumerationContext
+ffff898b`12010394  fffff803`02adcec0 nt!KeEnumerateNextProcessor
+ffff898b`1201039c  fffff803`02b14ba0 nt!KeCountSetBitsAffinityEx
+ffff898b`120103a4  fffff803`02bc7740 nt!KeQueryAffinityProcess
+ffff898b`120103ac  fffff803`02c0f850 nt!KeQueryAffinityThread
+ffff898b`120103b4  fffff803`02b138b0 nt!KeSetSystemGroupAffinityThread
+ffff898b`120103bc  fffff803`02b19450 nt!KeSetCoalescableTimer
+ffff898b`120103c4  fffff803`02aee8c0 nt!ObfDereferenceObject
+ffff898b`120103cc  fffff803`0307ddc0 nt!ObReferenceObjectByName
+ffff898b`120103d4  fffff803`02b15cc0 nt!RtlImageDirectoryEntryToData
+ffff898b`120103dc  fffff803`02b783c0 nt!RtlImageNtHeader
+ffff898b`120103e4  fffff803`02be7030 nt!RtlLookupFunctionTable
+ffff898b`120103ec  fffff803`02be6c50 nt!RtlPcToFileHeader
+ffff898b`120103f4  fffff803`02b15f30 nt!RtlSectionTableFromVirtualAddress
+ffff898b`120103fc  fffff803`02bd32a0 nt!DbgPrint
+ffff898b`12010404  fffff803`02bb2e80 nt!MmAllocateIndependentPages
+ffff898b`1201040c  fffff803`02bc66c0 nt!MmFreeIndependentPages
+ffff898b`12010414  fffff803`02bdae20 nt!MmSetPageProtection
+ffff898b`1201041c  00000000`00000000
+ffff898b`12010424  00000000`00000000
+ffff898b`1201042c  00000000`00000000
+ffff898b`12010434  00000000`00000000
+ffff898b`1201043c  00000000`00000000
+ffff898b`12010444  fffff803`02b7bb00 nt!RtlLookupFunctionEntry
+ffff898b`1201044c  fffff803`02b57cd0 nt!KeAcquireSpinLockRaiseToDpc
+ffff898b`12010454  fffff803`02b57a60 nt!KeReleaseSpinLock
+ffff898b`1201045c  fffff803`02ab83f0 nt!MmGetSessionById
+ffff898b`12010464  fffff803`02b9e860 nt!MmGetNextSession
+ffff898b`1201046c  fffff803`0319b220 nt!MmQuitNextSession
+ffff898b`12010474  fffff803`02b9f760 nt!MmAttachSession
+ffff898b`1201047c  fffff803`02b9f6c0 nt!MmDetachSession
+ffff898b`12010484  fffff803`02aefb50 nt!MmGetSessionIdEx
+ffff898b`1201048c  fffff803`02b8f4a0 nt!MmIsSessionAddress
+ffff898b`12010494  fffff803`02d7a0d0 nt!MmIsAddressValid
+ffff898b`1201049c  fffff803`02ab9650 nt!MmSessionGetWin32Callouts
+ffff898b`120104a4  fffff803`02b5b260 nt!KeInsertQueueApc
+ffff898b`120104ac  fffff803`02af0430 nt!KeWaitForSingleObject
+ffff898b`120104b4  00000000`00000000
+ffff898b`120104bc  fffff803`02ab96e0 nt!ExReferenceCallBackBlock
+ffff898b`120104c4  fffff803`02be9370 nt!ExGetCallBackBlockRoutine
+ffff898b`120104cc  fffff803`02ab9690 nt!ExDereferenceCallBackBlock
+ffff898b`120104d4  fffff803`02c5daa0 nt!KiMarkBugCheckRegions+0x3e4
+ffff898b`120104dc  fffff803`03195e60 nt!PspEnumerateCallback
+ffff898b`120104e4  fffff803`0319c230 nt!CmpEnumerateCallback
+ffff898b`120104ec  fffff803`02bb64e0 nt!DbgEnumerateCallback
+ffff898b`120104f4  fffff803`02be5100 nt!ExpEnumerateCallback
+ffff898b`120104fc  fffff803`031979b0 nt!ExpGetNextCallback
+ffff898b`12010504  fffff803`02c2a610 nt!EmpCheckErrataList
+ffff898b`1201050c  fffff803`0317f490 nt!KiSchedulerApcTerminate
+ffff898b`12010514  fffff803`02b80620 nt!KiSchedulerApc
+ffff898b`1201051c  fffff803`02c2a610 nt!EmpCheckErrataList
+ffff898b`12010524  fffff803`02c5eba0 nt!KiSwInterruptDispatch+0x10a0
+ffff898b`1201052c  fffff803`02bb3560 nt!MmAllocatePagesForMdlEx
+ffff898b`12010534  fffff803`031e2b20 nt!MmAllocateMappingAddress
+ffff898b`1201053c  fffff803`02c4bb10 nt!MmMapLockedPagesWithReservedMapping
+ffff898b`12010544  fffff803`02d765c0 nt!MmUnmapReservedMapping
+ffff898b`1201054c  fffff803`02c6b250 nt!KiSwInterruptDispatch+0xd750
+ffff898b`12010554  fffff803`02c6b2c0 nt!KiSwInterruptDispatch+0xd7c0
+ffff898b`1201055c  fffff803`030b1730 nt!MmAcquireLoadLock
+ffff898b`12010564  fffff803`030b16d0 nt!MmReleaseLoadLock
+ffff898b`1201056c  fffff803`02d60670 nt!KeEnumerateQueueApc
+ffff898b`12010574  fffff803`02d60800 nt!KeIsApcRunningThread
+ffff898b`1201057c  fffff803`02c5ea70 nt!KiSwInterruptDispatch+0xf70
+ffff898b`12010584  fffff803`030f1730 nt!PsAcquireProcessExitSynchronization
+ffff898b`1201058c  fffff803`03178cc0 nt!ObDereferenceProcessHandleTable
+ffff898b`12010594  fffff803`03140610 nt!PsGetNextProcess
+ffff898b`1201059c  fffff803`031cd730 nt!PsQuitNextProcess
+ffff898b`120105a4  fffff803`03140e90 nt!PsGetNextProcessEx
+ffff898b`120105ac  fffff803`031e94a0 nt!MmIsSessionLeaderProcess
+ffff898b`120105b4  fffff803`030812a0 nt!PsInvokeWin32Callout
+ffff898b`120105bc  fffff803`030d4490 nt!MmEnumerateAddressSpaceAndReferenceImages
+ffff898b`120105c4  fffff803`02bf1360 nt!PsGetProcessProtection
+ffff898b`120105cc  fffff803`02c24d80 nt!PsGetProcessSignatureLevel
+ffff898b`120105d4  fffff803`02b518a0 nt!PsGetProcessSectionBaseAddress
+ffff898b`120105dc  fffff803`031e96d0 nt!SeCompareSigningLevels
+ffff898b`120105e4  fffff803`02c4db80 nt!KeComputeSha256
+ffff898b`120105ec  fffff803`02c44190 nt!KeComputeParallelSha256
+ffff898b`120105f4  fffff803`02afdd90 nt!KeSetEvent
+ffff898b`120105fc  fffff803`02c41f20 nt!RtlpConvertFunctionEntry
+ffff898b`12010604  fffff803`02c41eb0 nt!RtlpLookupPrimaryFunctionEntry
+ffff898b`1201060c  fffff803`03072960 nt!RtlIsMultiSessionSku
+ffff898b`12010614  fffff803`02be9030 nt!KiEnumerateCallback
+ffff898b`1201061c  fffff803`02b1d750 nt!KeStackAttachProcess
+ffff898b`12010624  fffff803`02aead10 nt!KeUnstackDetachProcess
+ffff898b`1201062c  fffff803`02c32870 nt!KeIpiGenericCall
+ffff898b`12010634  fffff803`02c6b0a0 nt!KiSwInterruptDispatch+0xd5a0
+ffff898b`1201063c  fffff803`02bd1540 nt!MmGetPhysicalAddress
+ffff898b`12010644  fffff803`02b009a0 nt!MmUnlockPages
+ffff898b`1201064c  fffff803`02d46680 nt!VslVerifyPage
+ffff898b`12010654  fffff803`02be0cf0 nt!KiGetInterruptObjectAddress
+ffff898b`1201065c  00000000`00000000
+ffff898b`12010664  fffff803`030cff70 nt!PsLookupProcessByProcessId
+ffff898b`1201066c  fffff803`02b1bf30 nt!PsGetProcessId
+ffff898b`12010674  fffff803`02be37c0 nt!MmCheckProcessShadow
+ffff898b`1201067c  fffff803`0322d4b0 nt!MmGetImageRetpolineCodePage
+ffff898b`12010684  00000000`00000000
+ffff898b`1201068c  00000000`00000000
+ffff898b`12010694  00000000`00000000
+ffff898b`1201069c  00000000`00000000
+ffff898b`120106a4  fffff803`02ede1c0 nt!matherr_flag+0x8
+ffff898b`120106ac  fffff803`02ee1ba8 nt!TriageImagePageSize+0xa4
+ffff898b`120106b4  fffff803`02ee1bb0 nt!TriageImagePageSize+0xac
+ffff898b`120106bc  fffff803`02ee1bb8 nt!TriageImagePageSize+0xb4
+ffff898b`120106c4  ffff898b`1028f040
+ffff898b`120106cc  00b3fbf3`2de56818
+ffff898b`120106d4  fffff803`03028888 nt!KiEntropyTimingRoutine
+ffff898b`120106dc  fffff803`02f03850 nt!KiProcessListHead
+ffff898b`120106e4  fffff803`03041640 nt!KiProcessListLock
+ffff898b`120106ec  ffff898b`1029ebc0
+ffff898b`120106f4  ffff898b`1027fae0
+ffff898b`120106fc  ffff898b`10278140
+ffff898b`12010704  fffff803`02eecb40 nt!PsActiveProcessHead
+ffff898b`1201070c  fffff803`0303f010 nt!PsInvertedFunctionTable
+ffff898b`12010714  fffff803`02efc490 nt!PsLoadedModuleList
+ffff898b`1201071c  fffff803`02efc420 nt!PsLoadedModuleResource
+ffff898b`12010724  fffff803`030411c0 nt!PsLoadedModuleSpinLock
+ffff898b`1201072c  fffff803`034646a8 nt!PspActiveProcessLock
+ffff898b`12010734  fffff803`03028528 nt!PspCidTable
+ffff898b`1201073c  fffff803`02fba3f0 nt!ExpUuidLock
+ffff898b`12010744  fffff803`02efc580 nt!AlpcpPortListLock
+ffff898b`1201074c  fffff803`03040880 nt!KeServiceDescriptorTable
+ffff898b`12010754  fffff803`03028a40 nt!KeServiceDescriptorTableShadow
+ffff898b`1201075c  fffff803`03028a80 nt!KeServiceDescriptorTableFilter
+ffff898b`12010764  fffff803`02eebb88 nt!VfThunksExtended
+ffff898b`1201076c  fffff803`02eec988 nt!PsWin32CallBack
+ffff898b`12010774  fffff803`02ee1b88 nt!TriageImagePageSize+0x84
+ffff898b`1201077c  fffff803`02ee2a10 nt!KiTableInformation
+ffff898b`12010784  fffff803`03464ae0 nt!HandleTableListHead
+ffff898b`1201078c  fffff803`034646f0 nt!HandleTableListLock
+ffff898b`12010794  ffffe402`08a04ac0
+ffff898b`1201079c  fffff780`00000000
+ffff898b`120107a4  6ab04405`9fdd7af6
+ffff898b`120107ac  fffff803`033fd2a0 nt!SeProtectedMapping
+ffff898b`120107b4  fffff803`02c803d0 nt!$$0
+ffff898b`120107bc  fffff803`02f03b80 nt!KiStackProtectNotifyEvent
+ffff898b`120107c4  ffff8700`00000000
+ffff898b`120107cc  fffff803`02ab6000 nt!SeConvertSecurityDescriptorToStringSecurityDescriptor <PERF> (nt+0x0)
+ffff898b`120107d4  fffff803`02a13000
+ffff898b`120107dc  fffff803`03028384 nt!KeNumberProcessors
+ffff898b`120107e4  fffff803`03028348 nt!$$31+0x8
+ffff898b`120107ec  fffff803`03028350 nt!$$31+0x10
+ffff898b`120107f4  fffff803`0303f000 nt!RtlpInvertedFunctionTable
+ffff898b`120107fc  fffff803`02e06280 nt!KiIsrThunkShadow
+ffff898b`12010804  00000000`00000000
+ffff898b`1201080c  00000000`00000000
+ffff898b`12010814  00000000`000000e0
+ffff898b`1201081c  00000000`00002e50
+ffff898b`12010824  00000000`00002e6a
+ffff898b`1201082c  00000000`00000008
+ffff898b`12010834  00000000`00000040
+ffff898b`1201083c  00000000`00000042
+ffff898b`12010844  00000000`00000043
+ffff898b`1201084c  00000000`0000008d
+ffff898b`12010854  00000000`00000002
+ffff898b`1201085c  00000000`00000028
+ffff898b`12010864  00000000`00000288
+ffff898b`1201086c  00000000`00000098
+ffff898b`12010874  00000000`00000620
+ffff898b`1201087c  00000000`00000628
+ffff898b`12010884  00000000`000006a0
+ffff898b`1201088c  00000000`00000020
+ffff898b`12010894  00000000`00000248
+ffff898b`1201089c  00000000`000001c2
+ffff898b`120108a4  00000000`0000030c
+ffff898b`120108ac  00000000`00000418
+ffff898b`120108b4  00000000`000002f0
+ffff898b`120108bc  00000000`04000000
+ffff898b`120108c4  00000000`00000028
+ffff898b`120108cc  00000000`0000002c
+ffff898b`120108d4  00000000`00000040
+ffff898b`120108dc  00000000`000000c8
+ffff898b`120108e4  00000000`000000d8
+ffff898b`120108ec  00000000`00000070
+ffff898b`120108f4  00000000`00000040
+ffff898b`120108fc  00000000`00000000
+ffff898b`12010904  00000000`00000002
+ffff898b`1201090c  00000000`00000040
+ffff898b`12010914  00000000`00000000
+ffff898b`1201091c  00000000`00000010
+ffff898b`12010924  00000000`00000018
+ffff898b`1201092c  00000000`00000000
+ffff898b`12010934  00000000`00000030
+ffff898b`1201093c  00000000`00000040
+ffff898b`12010944  00000000`00000058
+ffff898b`1201094c  00000000`000000a8
+ffff898b`12010954  00000000`00000000
+ffff898b`1201095c  00000000`00000000
+ffff898b`12010964  00000000`00000000
+ffff898b`1201096c  ffff898b`1033b1db
+ffff898b`12010974  ffff898b`1033b21b
+ffff898b`1201097c  00000000`00000000
+ffff898b`12010984  00000000`00000000
+ffff898b`1201098c  ffff898b`1202b965
+ffff898b`12010994  ffff898b`120101e4
+ffff898b`1201099c  e6e82298`05b6a9c6
+ffff898b`120109a4  fffff803`0190f180
+ffff898b`120109ac  ffff898b`12010000
+ffff898b`120109b4  00000000`00000000
+ffff898b`120109bc  fffff803`02ded770 nt!ExpCenturyDpcRoutine
+ffff898b`120109c4  0008ab54`00000045
+ffff898b`120109cc  0001b6f1`0001a3d1
+ffff898b`120109d4  0001aee1`0001b781
+ffff898b`120109dc  00000000`00000000
+ffff898b`120109e4  00000000`00000000
+ffff898b`120109ec  00000196`0001bc44
+ffff898b`120109f4  00000021`63536c41
+ffff898b`120109fc  56e0a701`f9dad438
+ffff898b`12010a04  00001c6f`0000004c
+ffff898b`12010a0c  000a0000`0008ab54
+ffff898b`12010a14  00000017`00000000
+ffff898b`12010a1c  00000000`00000000
+ffff898b`12010a24  00000000`00000000
+ffff898b`12010a2c  02e08e04`00105180
+ffff898b`12010a34  00000000`fffff803
+ffff898b`12010a3c  02e08e03`00105200
+ffff898b`12010a44  00000000`fffff803
+ffff898b`12010a4c  02e08e02`00105980
+ffff898b`12010a54  00000000`fffff803
+ffff898b`12010a5c  8748050f`08c3cf48
+ffff898b`12010a64  feff1024`6481240c
+ffff898b`12010a6c  242c8348`cf48ffff
+ffff898b`12010a74  00000000`00cf4802
+ffff898b`12010a7c  00000000`00000000
+ffff898b`12010a84  00000000`00000000
+ffff898b`12010a8c  00000050`00000000
+ffff898b`12010a94  00000000`00000018
+ffff898b`12010a9c  fffff803`02a429d0
+ffff898b`12010aa4  00000000`00000000
+ffff898b`12010aac  fffff803`02ab6000 nt!SeConvertSecurityDescriptorToStringSecurityDescriptor <PERF> (nt+0x0)
+ffff898b`12010ab4  fffff803`0356b000
+ffff898b`12010abc  fffff803`02ab6108 nt!SeConvertSecurityDescriptorToStringSecurityDescriptor <PERF> (nt+0x108)
+ffff898b`12010ac4  ffff898b`102b4e80
+ffff898b`12010acc  00000000`00000000
+ffff898b`12010ad4  00000000`ffffffff
+ffff898b`12010adc  00000000`00000000
+ffff898b`12010ae4  00000000`00000000
+ffff898b`12010aec  00000000`00000000
+ffff898b`12010af4  00000000`00000000
+ffff898b`12010afc  00000000`00000000
+ffff898b`12010b04  00000000`00000030
+ffff898b`12010b0c  00000000`00000000
+ffff898b`12010b14  fffff803`02e54358 nt!`string'
+ffff898b`12010b1c  fffff803`02e54368 nt!`string'
+ffff898b`12010b24  fffff803`02e54374 nt!`string'
+ffff898b`12010b2c  fffff803`02e54360 nt!`string'
+ffff898b`12010b34  fb006943`00000001
+ffff898b`12010b3c  f9d4a176`0000000b
+ffff898b`12010b44  fffff803`02ee1bc0 nt!TriageImagePageSize+0xbc
+ffff898b`12010b4c  665482a0`9e8c3b8f
+ffff898b`12010b54  0008c000`ffffffff
+ffff898b`12010b5c  ffffb850`14050000
+ffff898b`12010b64  00000000`00000000
+ffff898b`12010b6c  00000000`00000000
+ffff898b`12010b74  00042002`21601c4c
+ffff898b`12010b7c  00000000`00000000
+ffff898b`12010b84  00000000`00000000
+ffff898b`12010b8c  00000000`00000000
+ffff898b`12010b94  00000000`00000000
+ffff898b`12010b9c  00000000`00000000
+ffff898b`12010ba4  00000000`00000000
+ffff898b`12010bac  00000000`00000000
+ffff898b`12010bb4  00000000`00000000
+ffff898b`12010bbc  00000000`00000000
+ffff898b`12010bc4  00000000`00000000
+ffff898b`12010bcc  00000000`00000000
+ffff898b`12010bd4  00000000`00000000
+ffff898b`12010bdc  00000000`00000000
+ffff898b`12010be4  ffff898b`102bebf0
+ffff898b`12010bec  00000000`00000000
+ffff898b`12010bf4  ffffa301`060aa000
+ffff898b`12010bfc  00000000`00000000
+ffff898b`12010c04  cf8ad63a`49aff672
+ffff898b`12010c0c  0001c964`0001c934
+ffff898b`12010c14  00000000`00000000
+ffff898b`12010c1c  00000000`00000000
+ffff898b`12010c24  00000000`00000000
+ffff898b`12010c2c  00000000`00000000
+ffff898b`12010c34  00000000`00000000
+ffff898b`12010c3c  00000000`00000000
+ffff898b`12010c44  00000000`00000000
+ffff898b`12010c4c  00000000`00000000
+ffff898b`12010c54  00000000`00000000
+ffff898b`12010c5c  00000000`00000000
+ffff898b`12010c64  00000000`00000000
+ffff898b`12010c6c  00000000`00000000
+ffff898b`12010c74  00000000`0000137f
+ffff898b`12010c7c  00000000`00000000
+ffff898b`12010c84  00000017`00000010
+ffff898b`12010c8c  fffff803`02a45340
+ffff898b`12010c94  00000000`000000a6
+ffff898b`12010c9c  fffff803`02c75cc0 nt!KeBugCheckEx
+ffff898b`12010ca4  00000000`00000120
+ffff898b`12010cac  fffff803`02d5ce60 nt!KeBugCheck2
+ffff898b`12010cb4  00000000`00000ddb
+ffff898b`12010cbc  fffff803`02d5e0b0 nt!KiBugCheckDebugBreak
+ffff898b`12010cc4  00000000`000000c5
+ffff898b`12010ccc  fffff803`02c80940 nt!KiDebugTrapOrFault
+ffff898b`12010cd4  00000000`000000ad
+ffff898b`12010cdc  fffff803`02c7db50 nt!DbgBreakPointWithStatus
+ffff898b`12010ce4  00000000`00000002
+ffff898b`12010cec  fffff803`02c7dcf0 nt!RtlCaptureContext
+ffff898b`12010cf4  00000000`00000137
+ffff898b`12010cfc  fffff803`02bd11b0 nt!KeQueryCurrentStackInformation
+ffff898b`12010d04  00000000`0000003e
+ffff898b`12010d0c  fffff803`02c76010 nt!KiSaveProcessorControlState
+ffff898b`12010d14  00000000`00000172
+ffff898b`12010d1c  fffff803`02c88a40 nt!memcpy
+ffff898b`12010d24  00000000`00000339
+ffff898b`12010d2c  fffff803`02d4af30 nt!IoSaveBugCheckProgress
+ffff898b`12010d34  00000000`000000e3
+ffff898b`12010d3c  fffff803`02adcf50 nt!KeIsEmptyAffinityEx
+ffff898b`12010d44  00000000`00000029
+ffff898b`12010d4c  fffff803`0341a1b0 nt!VfNotifyVerifierOfEvent
+ffff898b`12010d54  00000000`00000120
+ffff898b`12010d5c  fffff803`02c7e780 nt!guard_check_icall
+ffff898b`12010d64  00000000`0000004a
+ffff898b`12010d6c  fffff803`02e22310 nt!KeGuardDispatchICall
+ffff898b`12010d74  00000000`00000006
+ffff898b`12010d7c  fffff803`02edcd28 nt!HalPrivateDispatchTable+0x48
+
+第二遍
+ffff898b`120102cd  fffff803`02aecd90 nt!ExAcquireResourceSharedLite
+ffff898b`120102d5  fffff803`02aec9b0 nt!ExAcquireResourceExclusiveLite
+ffff898b`120102dd  fffff803`02e23010 nt!ExAllocatePoolWithTag
+ffff898b`120102e5  fffff803`02e230a0 nt!ExFreePool
+ffff898b`120102ed  fffff803`03113430 nt!ExMapHandleToPointer
+ffff898b`120102f5  fffff803`02b74710 nt!ExQueueWorkItem
+ffff898b`120102fd  fffff803`02aec230 nt!ExReleaseResourceLite
+ffff898b`12010305  fffff803`031d9570 nt!ExUnlockHandleTableEntry
+ffff898b`1201030d  fffff803`02aef3d0 nt!ExAcquirePushLockExclusiveEx
+ffff898b`12010315  fffff803`02aef160 nt!ExReleasePushLockExclusiveEx
+ffff898b`1201031d  fffff803`02aef590 nt!ExAcquirePushLockSharedEx
+ffff898b`12010325  fffff803`02aefe10 nt!ExReleasePushLockSharedEx
+ffff898b`1201032d  fffff803`02abccc0 nt!KeAcquireInStackQueuedSpinLockAtDpcLevel
+ffff898b`12010335  fffff803`02bb68e0 nt!ExAcquireSpinLockSharedAtDpcLevel
+ffff898b`1201033d  fffff803`02c75cc0 nt!KeBugCheckEx
+ffff898b`12010345  fffff803`02aeb7e0 nt!KeDelayExecutionThread
+ffff898b`1201034d  fffff803`02b6cb20 nt!KeEnterCriticalRegionThread
+ffff898b`12010355  fffff803`02aee880 nt!KeLeaveCriticalRegion
+ffff898b`1201035d  fffff803`02b1bf10 nt!KeEnterGuardedRegion
+ffff898b`12010365  fffff803`02b1bed0 nt!KeLeaveGuardedRegion
+ffff898b`1201036d  fffff803`02aee560 nt!KxReleaseQueuedSpinLock
+ffff898b`12010375  fffff803`02af8090 nt!ExReleaseSpinLockSharedFromDpcLevel
+ffff898b`1201037d  fffff803`02b13610 nt!KeRevertToUserGroupAffinityThread
+ffff898b`12010385  fffff803`02be70c0 nt!KeProcessorGroupAffinity
+ffff898b`1201038d  fffff803`02b5e280 nt!KeInitializeEnumerationContext
+ffff898b`12010395  fffff803`02adcec0 nt!KeEnumerateNextProcessor
+ffff898b`1201039d  fffff803`02b14ba0 nt!KeCountSetBitsAffinityEx
+ffff898b`120103a5  fffff803`02bc7740 nt!KeQueryAffinityProcess
+ffff898b`120103ad  fffff803`02c0f850 nt!KeQueryAffinityThread
+ffff898b`120103b5  fffff803`02b138b0 nt!KeSetSystemGroupAffinityThread
+ffff898b`120103bd  fffff803`02b19450 nt!KeSetCoalescableTimer
+ffff898b`120103c5  fffff803`02aee8c0 nt!ObfDereferenceObject
+ffff898b`120103cd  fffff803`0307ddc0 nt!ObReferenceObjectByName
+ffff898b`120103d5  fffff803`02b15cc0 nt!RtlImageDirectoryEntryToData
+ffff898b`120103dd  fffff803`02b783c0 nt!RtlImageNtHeader
+ffff898b`120103e5  fffff803`02be7030 nt!RtlLookupFunctionTable
+ffff898b`120103ed  fffff803`02be6c50 nt!RtlPcToFileHeader
+ffff898b`120103f5  fffff803`02b15f30 nt!RtlSectionTableFromVirtualAddress
+ffff898b`120103fd  fffff803`02bd32a0 nt!DbgPrint
+ffff898b`12010405  fffff803`02bb2e80 nt!MmAllocateIndependentPages
+ffff898b`1201040d  fffff803`02bc66c0 nt!MmFreeIndependentPages
+ffff898b`12010415  fffff803`02bdae20 nt!MmSetPageProtection
+ffff898b`1201041d  00000000`00000000
+ffff898b`12010425  00000000`00000000
+ffff898b`1201042d  00000000`00000000
+ffff898b`12010435  00000000`00000000
+ffff898b`1201043d  00000000`00000000
+ffff898b`12010445  fffff803`02b7bb00 nt!RtlLookupFunctionEntry
+ffff898b`1201044d  fffff803`02b57cd0 nt!KeAcquireSpinLockRaiseToDpc
+ffff898b`12010455  fffff803`02b57a60 nt!KeReleaseSpinLock
+ffff898b`1201045d  fffff803`02ab83f0 nt!MmGetSessionById
+ffff898b`12010465  fffff803`02b9e860 nt!MmGetNextSession
+ffff898b`1201046d  fffff803`0319b220 nt!MmQuitNextSession
+ffff898b`12010475  fffff803`02b9f760 nt!MmAttachSession
+ffff898b`1201047d  fffff803`02b9f6c0 nt!MmDetachSession
+ffff898b`12010485  fffff803`02aefb50 nt!MmGetSessionIdEx
+ffff898b`1201048d  fffff803`02b8f4a0 nt!MmIsSessionAddress
+ffff898b`12010495  fffff803`02d7a0d0 nt!MmIsAddressValid
+ffff898b`1201049d  fffff803`02ab9650 nt!MmSessionGetWin32Callouts
+ffff898b`120104a5  fffff803`02b5b260 nt!KeInsertQueueApc
+ffff898b`120104ad  fffff803`02af0430 nt!KeWaitForSingleObject
+ffff898b`120104b5  00000000`00000000
+ffff898b`120104bd  fffff803`02ab96e0 nt!ExReferenceCallBackBlock
+ffff898b`120104c5  fffff803`02be9370 nt!ExGetCallBackBlockRoutine
+ffff898b`120104cd  fffff803`02ab9690 nt!ExDereferenceCallBackBlock
+ffff898b`120104d5  fffff803`02c5daa0 nt!KiMarkBugCheckRegions+0x3e4
+ffff898b`120104dd  fffff803`03195e60 nt!PspEnumerateCallback
+ffff898b`120104e5  fffff803`0319c230 nt!CmpEnumerateCallback
+ffff898b`120104ed  fffff803`02bb64e0 nt!DbgEnumerateCallback
+ffff898b`120104f5  fffff803`02be5100 nt!ExpEnumerateCallback
+ffff898b`120104fd  fffff803`031979b0 nt!ExpGetNextCallback
+ffff898b`12010505  fffff803`02c2a610 nt!EmpCheckErrataList
+ffff898b`1201050d  fffff803`0317f490 nt!KiSchedulerApcTerminate
+ffff898b`12010515  fffff803`02b80620 nt!KiSchedulerApc
+ffff898b`1201051d  fffff803`02c2a610 nt!EmpCheckErrataList
+ffff898b`12010525  fffff803`02c5eba0 nt!KiSwInterruptDispatch+0x10a0
+ffff898b`1201052d  fffff803`02bb3560 nt!MmAllocatePagesForMdlEx
+ffff898b`12010535  fffff803`031e2b20 nt!MmAllocateMappingAddress
+ffff898b`1201053d  fffff803`02c4bb10 nt!MmMapLockedPagesWithReservedMapping
+ffff898b`12010545  fffff803`02d765c0 nt!MmUnmapReservedMapping
+ffff898b`1201054d  fffff803`02c6b250 nt!KiSwInterruptDispatch+0xd750
+ffff898b`12010555  fffff803`02c6b2c0 nt!KiSwInterruptDispatch+0xd7c0
+ffff898b`1201055d  fffff803`030b1730 nt!MmAcquireLoadLock
+ffff898b`12010565  fffff803`030b16d0 nt!MmReleaseLoadLock
+ffff898b`1201056d  fffff803`02d60670 nt!KeEnumerateQueueApc
+ffff898b`12010575  fffff803`02d60800 nt!KeIsApcRunningThread
+ffff898b`1201057d  fffff803`02c5ea70 nt!KiSwInterruptDispatch+0xf70
+ffff898b`12010585  fffff803`030f1730 nt!PsAcquireProcessExitSynchronization
+ffff898b`1201058d  fffff803`03178cc0 nt!ObDereferenceProcessHandleTable
+ffff898b`12010595  fffff803`03140610 nt!PsGetNextProcess
+ffff898b`1201059d  fffff803`031cd730 nt!PsQuitNextProcess
+ffff898b`120105a5  fffff803`03140e90 nt!PsGetNextProcessEx
+ffff898b`120105ad  fffff803`031e94a0 nt!MmIsSessionLeaderProcess
+ffff898b`120105b5  fffff803`030812a0 nt!PsInvokeWin32Callout
+ffff898b`120105bd  fffff803`030d4490 nt!MmEnumerateAddressSpaceAndReferenceImages
+ffff898b`120105c5  fffff803`02bf1360 nt!PsGetProcessProtection
+ffff898b`120105cd  fffff803`02c24d80 nt!PsGetProcessSignatureLevel
+ffff898b`120105d5  fffff803`02b518a0 nt!PsGetProcessSectionBaseAddress
+ffff898b`120105dd  fffff803`031e96d0 nt!SeCompareSigningLevels
+ffff898b`120105e5  fffff803`02c4db80 nt!KeComputeSha256
+ffff898b`120105ed  fffff803`02c44190 nt!KeComputeParallelSha256
+ffff898b`120105f5  fffff803`02afdd90 nt!KeSetEvent
+ffff898b`120105fd  fffff803`02c41f20 nt!RtlpConvertFunctionEntry
+ffff898b`12010605  fffff803`02c41eb0 nt!RtlpLookupPrimaryFunctionEntry
+ffff898b`1201060d  fffff803`03072960 nt!RtlIsMultiSessionSku
+ffff898b`12010615  fffff803`02be9030 nt!KiEnumerateCallback
+ffff898b`1201061d  fffff803`02b1d750 nt!KeStackAttachProcess
+ffff898b`12010625  fffff803`02aead10 nt!KeUnstackDetachProcess
+ffff898b`1201062d  fffff803`02c32870 nt!KeIpiGenericCall
+ffff898b`12010635  fffff803`02c6b0a0 nt!KiSwInterruptDispatch+0xd5a0
+ffff898b`1201063d  fffff803`02bd1540 nt!MmGetPhysicalAddress
+ffff898b`12010645  fffff803`02b009a0 nt!MmUnlockPages
+ffff898b`1201064d  fffff803`02d46680 nt!VslVerifyPage
+ffff898b`12010655  fffff803`02be0cf0 nt!KiGetInterruptObjectAddress
+ffff898b`1201065d  00000000`00000000
+ffff898b`12010665  fffff803`030cff70 nt!PsLookupProcessByProcessId
+ffff898b`1201066d  fffff803`02b1bf30 nt!PsGetProcessId
+ffff898b`12010675  fffff803`02be37c0 nt!MmCheckProcessShadow
+ffff898b`1201067d  fffff803`0322d4b0 nt!MmGetImageRetpolineCodePage
+ffff898b`12010685  00000000`00000000
+ffff898b`1201068d  00000000`00000000
+ffff898b`12010695  00000000`00000000
+ffff898b`1201069d  00000000`00000000
+ffff898b`120106a5  fffff803`02ede1c0 nt!matherr_flag+0x8
+ffff898b`120106ad  fffff803`02ee1ba8 nt!TriageImagePageSize+0xa4
+ffff898b`120106b5  fffff803`02ee1bb0 nt!TriageImagePageSize+0xac
+ffff898b`120106bd  fffff803`02ee1bb8 nt!TriageImagePageSize+0xb4
+ffff898b`120106c5  ffff898b`1028f040
+ffff898b`120106cd  00b3fbf3`2de56818
+ffff898b`120106d5  fffff803`03028888 nt!KiEntropyTimingRoutine
+ffff898b`120106dd  fffff803`02f03850 nt!KiProcessListHead
+ffff898b`120106e5  fffff803`03041640 nt!KiProcessListLock
+ffff898b`120106ed  ffff898b`1029ebc0
+ffff898b`120106f5  ffff898b`1027fae0
+ffff898b`120106fd  ffff898b`10278140
+ffff898b`12010705  fffff803`02eecb40 nt!PsActiveProcessHead
+ffff898b`1201070d  fffff803`0303f010 nt!PsInvertedFunctionTable
+ffff898b`12010715  fffff803`02efc490 nt!PsLoadedModuleList
+ffff898b`1201071d  fffff803`02efc420 nt!PsLoadedModuleResource
+ffff898b`12010725  fffff803`030411c0 nt!PsLoadedModuleSpinLock
+ffff898b`1201072d  fffff803`034646a8 nt!PspActiveProcessLock
+ffff898b`12010735  fffff803`03028528 nt!PspCidTable
+ffff898b`1201073d  fffff803`02fba3f0 nt!ExpUuidLock
+ffff898b`12010745  fffff803`02efc580 nt!AlpcpPortListLock
+ffff898b`1201074d  fffff803`03040880 nt!KeServiceDescriptorTable
+ffff898b`12010755  fffff803`03028a40 nt!KeServiceDescriptorTableShadow
+ffff898b`1201075d  fffff803`03028a80 nt!KeServiceDescriptorTableFilter
+ffff898b`12010765  fffff803`02eebb88 nt!VfThunksExtended
+ffff898b`1201076d  fffff803`02eec988 nt!PsWin32CallBack
+ffff898b`12010775  fffff803`02ee1b88 nt!TriageImagePageSize+0x84
+ffff898b`1201077d  fffff803`02ee2a10 nt!KiTableInformation
+ffff898b`12010785  fffff803`03464ae0 nt!HandleTableListHead
+ffff898b`1201078d  fffff803`034646f0 nt!HandleTableListLock
+ffff898b`12010795  ffffe402`08a04ac0
+ffff898b`1201079d  fffff780`00000000
+ffff898b`120107a5  6ab04405`9fdd7af6
+ffff898b`120107ad  fffff803`033fd2a0 nt!SeProtectedMapping
+ffff898b`120107b5  fffff803`02c803d0 nt!$$0
+ffff898b`120107bd  fffff803`02f03b80 nt!KiStackProtectNotifyEvent
+ffff898b`120107c5  ffff8700`00000000
+ffff898b`120107cd  fffff803`02ab6000 nt!SeConvertSecurityDescriptorToStringSecurityDescriptor <PERF> (nt+0x0)
+ffff898b`120107d5  fffff803`02a13000
+ffff898b`120107dd  fffff803`03028384 nt!KeNumberProcessors
+ffff898b`120107e5  fffff803`03028348 nt!$$31+0x8
+ffff898b`120107ed  fffff803`03028350 nt!$$31+0x10
+ffff898b`120107f5  fffff803`0303f000 nt!RtlpInvertedFunctionTable
+ffff898b`120107fd  fffff803`02e06280 nt!KiIsrThunkShadow
+ffff898b`12010805  00000000`00000000
+ffff898b`1201080d  00000000`00000000
+ffff898b`12010815  00000000`000000e0
+ffff898b`1201081d  00000000`00002e50
+ffff898b`12010825  00000000`00002e6a
+ffff898b`1201082d  00000000`00000008
+ffff898b`12010835  00000000`00000040
+ffff898b`1201083d  00000000`00000042
+ffff898b`12010845  00000000`00000043
+ffff898b`1201084d  00000000`0000008d
+ffff898b`12010855  00000000`00000002
+ffff898b`1201085d  00000000`00000028
+ffff898b`12010865  00000000`00000288
+ffff898b`1201086d  00000000`00000098
+ffff898b`12010875  00000000`00000620
+ffff898b`1201087d  00000000`00000628
+ffff898b`12010885  00000000`000006a0
+ffff898b`1201088d  00000000`00000020
+ffff898b`12010895  00000000`00000248
+ffff898b`1201089d  00000000`000001c2
+ffff898b`120108a5  00000000`0000030c
+ffff898b`120108ad  00000000`00000418
+ffff898b`120108b5  00000000`000002f0
+ffff898b`120108bd  00000000`04000000
+ffff898b`120108c5  00000000`00000028
+ffff898b`120108cd  00000000`0000002c
+ffff898b`120108d5  00000000`00000040
+ffff898b`120108dd  00000000`000000c8
+ffff898b`120108e5  00000000`000000d8
+ffff898b`120108ed  00000000`00000070
+ffff898b`120108f5  00000000`00000040
+ffff898b`120108fd  00000000`00000000
+ffff898b`12010905  00000000`00000002
+ffff898b`1201090d  00000000`00000040
+ffff898b`12010915  00000000`00000000
+ffff898b`1201091d  00000000`00000010
+ffff898b`12010925  00000000`00000018
+ffff898b`1201092d  00000000`00000000
+ffff898b`12010935  00000000`00000030
+ffff898b`1201093d  00000000`00000040
+ffff898b`12010945  00000000`00000058
+ffff898b`1201094d  00000000`000000a8
+ffff898b`12010955  00000000`00000000
+ffff898b`1201095d  00000000`00000000
+ffff898b`12010965  00000000`00000000
+ffff898b`1201096d  ffff898b`1033b1db
+ffff898b`12010975  ffff898b`1033b21b
+ffff898b`1201097d  00000000`00000000
+ffff898b`12010985  ffff898b`10289a78
+ffff898b`1201098d  ffff898b`1202b966
+ffff898b`12010995  ffff898b`120101e5
+ffff898b`1201099d  e50b46a0`34aba24d
+ffff898b`120109a5  fffff803`0190f180
+ffff898b`120109ad  ffff898b`12010000
+ffff898b`120109b5  00000000`00000000
+ffff898b`120109bd  fffff803`02ded770 nt!ExpCenturyDpcRoutine
+
+
+
+CTX + 00000000`0001b781 = FsRtlUninitializeSmallMcbl
+获取到WorkItem线程回溯，再给 CTX + 00000000`0001b781 +9 下软断点，可以中断，FsRtlMdlReadCompleteDevEx里面清除硬件断点，但不会自检查了。

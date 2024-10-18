@@ -3658,7 +3658,7 @@ LABEL_174:
                           v954 = CurrentIrql;
                           while ( 1 )
                           {
-                            v955 = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, _QWORD *))(v93 + 1128))(
+                            v955 = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, _QWORD *))(v93 + 1128))(// VslVerifyPage
                                      v953,
                                      0i64,
                                      v945,
@@ -4137,7 +4137,7 @@ LABEL_1530:
                       v1008 = v1005;
                       while ( 1 )
                       {
-                        LODWORD(v107) = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD))(v93 + 1128))(v1006, 0i64);
+                        LODWORD(v107) = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD))(v93 + 1128))(v1006, 0i64); // VslVerifyPage
                         if ( (_DWORD)v107 != -1073741267 )
                           break;
                         if ( v1005 > 1u )
@@ -4275,7 +4275,7 @@ LABEL_1569:
                     v1008 = v1028;
                     while ( 1 )
                     {
-                      LODWORD(v107) = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, _QWORD *))(v93 + 1128))(
+                      LODWORD(v107) = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, _QWORD *))(v93 + 1128))(// VslVerifyPage
                                         v1029,
                                         0i64,
                                         v1027,
@@ -16571,7 +16571,7 @@ LABEL_3601:
               v2252 = v2250;
               while ( 1 )
               {
-                v2253 = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, __int64))(v93 + 1128))(
+                v2253 = (*(__int64 (__fastcall **)(unsigned __int64, _QWORD, __int64, __int64))(v93 + 1128))( // VslVerifyPage
                           v2251,
                           0i64,
                           v2232,
