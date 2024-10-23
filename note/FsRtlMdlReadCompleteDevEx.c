@@ -2514,7 +2514,7 @@ struct_Context_Function *__fastcall FsRtlMdlReadCompleteDevEx(struct_Context_Fun
   unsigned __int64 v2512; // rcx
   int v2513; // edx
   __int64 v2514; // r8
-  unsigned __int64 qword790; // rsi
+  unsigned __int64 pg_dpc; // rsi
   __int64 qword788; // r12
   __int64 sub_1403ED5B0; // rax
   __int64 v2518; // r9
@@ -2970,12 +2970,12 @@ struct_Context_Function *__fastcall FsRtlMdlReadCompleteDevEx(struct_Context_Fun
     {
       __sidt(v2719);
       __lidt(v2691);
-      __writedr(7u, 0i64);
+      __writedr(7u, 0i64);  //清硬件断点
       __lidt(v2719);
     }
     else
     {
-      __writedr(7u, 0i64);
+      __writedr(7u, 0i64); //清硬件断点
     }
     _enable();
   }
@@ -3502,7 +3502,7 @@ LABEL_117:
     while ( 1 )
     {
       if ( (*(_DWORD *)(v93 + 2448) & 0x110000) != 1114112 )
-        __writedr(7u, 0i64);
+        __writedr(7u, 0i64); // 清硬件断点
       if ( v105 == *(_DWORD *)(v93 + 2060) )
       {
         ++*(_DWORD *)(v93 + 2096);
@@ -11615,7 +11615,7 @@ LABEL_1867:
               _disable();
               __sidt(v2721);
               __lidt(v2693);
-              __writedr(7u, 0i64);
+              __writedr(7u, 0i64); // 清硬件断点
               *(_WORD *)(v1183 + 16) = v93 + 2174;
               v1187 = (unsigned __int64)(v93 + 2174) >> 16;
               *(_WORD *)(v1183 + 22) = v1187;
@@ -17263,7 +17263,7 @@ LABEL_3639:
     }
     if ( (v2934 & 0x8000) != 0 || !*(_DWORD *)(v93 + 2296) )
     {
-      v2354 = sub_140B0F020_pg_alloc_mem(CTX, CTX->unsigned_int7E4, CTX->unsigned_int924_alloc_mem_way);
+      v2354 = sub_140B0F020_pg_alloc_mem(CTX, CTX->unsigned_int7E4, CTX->unsigned_int924_alloc_mem_way); //下一个PG_CTX地址
       v93 = (__int64)v2354;
       if ( v2354 )
       {
@@ -17616,7 +17616,7 @@ LABEL_3866:
       }
       while ( v2490 < 0x19 );
     }
-    (*(void (__fastcall **)(__int64))(v93 + 616))(v93 + 2048);
+    (*(void (__fastcall **)(__int64))(v93 + 616))(v93 + 2048); // KeAcquireSpinLockRaiseToDpc
   }
 LABEL_3875:
   ctx2 = CTX;
@@ -17675,19 +17675,19 @@ LABEL_3875:
     while ( v2513 == v2510 );
     ctx2 = CTX;
     v2514 = (v93 ^ v2484 | (1i64 << v2510)) & ~(1i64 << v2513);
-    qword790 = CTX->qword790;
+    pg_dpc = CTX->pg_dpc;
     qword788 = CTX->qword788;
     if ( CTX->unsigned_int924_alloc_mem_way == 3 && (v2504 = sub_1403E1170) != 0 )
     {
       sub_1403ED5B0 = CTX->sub_1403ED5B0;
-      *(_BYTE *)qword790 = 19;
-      *(_BYTE *)(qword790 + 1) = 1;
-      *(_WORD *)(qword790 + 2) = 0;
-      *(_QWORD *)(qword790 + 24) = sub_1403ED5B0;
-      *(_QWORD *)(qword790 + 32) = v2504;
-      *(_QWORD *)(qword790 + 56) = 0i64;
-      *(_QWORD *)(qword790 + 16) = 0i64;
-      *(_QWORD *)(qword790 + 40) = v2514;
+      *(_BYTE *)pg_dpc = 19;
+      *(_BYTE *)(pg_dpc + 1) = 1;
+      *(_WORD *)(pg_dpc + 2) = 0;
+      *(_QWORD *)(pg_dpc + 24) = sub_1403ED5B0;
+      *(_QWORD *)(pg_dpc + 32) = v2504; //<<<<<< dpc+0x20 设置下个PG_CTX的XOR_KEY_PTR
+      *(_QWORD *)(pg_dpc + 56) = 0i64;
+      *(_QWORD *)(pg_dpc + 16) = 0i64;
+      *(_QWORD *)(pg_dpc + 40) = v2514;
       ((void (__fastcall *)(_QWORD, _QWORD, _QWORD))CTX->MmUnmapReservedMapping)(
         *(_QWORD *)(v2504 + 8),
         *(unsigned int *)(v2504 + 16),
@@ -17742,19 +17742,19 @@ LABEL_3875:
     }
     else
     {
-      *(_BYTE *)qword790 = 19;
-      *(_BYTE *)(qword790 + 1) = 1;
-      *(_WORD *)(qword790 + 2) = v2504;
-      *(_QWORD *)(qword790 + 24) = v2496;
-      *(_QWORD *)(qword790 + 32) = v2514;
-      *(_QWORD *)(qword790 + 56) = v2504;
-      *(_QWORD *)(qword790 + 16) = v2504;
+      *(_BYTE *)pg_dpc = 19;
+      *(_BYTE *)(pg_dpc + 1) = 1;
+      *(_WORD *)(pg_dpc + 2) = v2504;
+      *(_QWORD *)(pg_dpc + 24) = v2496;
+      *(_QWORD *)(pg_dpc + 32) = v2514;
+      *(_QWORD *)(pg_dpc + 56) = v2504;
+      *(_QWORD *)(pg_dpc + 16) = v2504;
     }
-    *(_QWORD *)(qword790 + 64) = v2484;
+    *(_QWORD *)(pg_dpc + 64) = v2484; //<<<<<< dpc+0x40 设置下个PG_CTX的XOR_KEY
     if ( (ctx2->bug_check_flags_int990 & 0x100) != 0 )
     {
       v2531 = (unsigned __int64)(v2496 - 18);
-      *((_QWORD *)v2496 - 1) = qword790;
+      *((_QWORD *)v2496 - 1) = pg_dpc;
       v2532 = 25i64;
       v2533 = __rdtsc();
       v2534 = __ROR8__(v2533, 3) ^ v2533;
@@ -17772,7 +17772,7 @@ LABEL_3875:
     }
     else
     {
-      v2531 = qword790;
+      v2531 = pg_dpc;
     }
     qwordA98 = ctx2->qwordA98;
     if ( qwordA98 )
@@ -17809,7 +17809,7 @@ LABEL_3875:
       *(_QWORD *)&v2565 = __rdtsc();
       v2567 = (__ROR8__(v2565, 3) ^ (unsigned __int64)v2565) * (unsigned __int128)0x7010008004002001ui64;
       v2817 = *((_QWORD *)&v2567 + 1);
-      ((void (__fastcall *)(__int64, unsigned __int64, _QWORD, unsigned __int64, unsigned __int64))ctx2->KeSetCoalescableTimer)(
+      ((void (__fastcall *)(__int64, unsigned __int64, _QWORD, unsigned __int64, unsigned __int64))ctx2->KeSetCoalescableTimer)( // 挂时钟DPC
         qword788,
         v2566,
         0i64,
@@ -17860,7 +17860,7 @@ LABEL_3875:
       apc->Inserted = v2504;
       if ( !((unsigned __int8 (__fastcall *)(_QWORD, unsigned __int64, _QWORD, _QWORD))ctx2->KeInsertQueueApc)(
               ctx2->pg_apc_qword9E0,
-              qword790,
+              pg_dpc,
               0i64,
               0i64) )
       {
@@ -17935,7 +17935,7 @@ LABEL_3937:
       }
     }
     _InterlockedOr(v2598, v2504);
-    *(_QWORD *)(v2558 + *(_QWORD *)&ctx2->gap698[8]) = qword790;
+    *(_QWORD *)(v2558 + *(_QWORD *)&ctx2->gap698[8]) = pg_dpc;
   }
 LABEL_3938:
   if ( v2723 != (_DWORD)v2504 )

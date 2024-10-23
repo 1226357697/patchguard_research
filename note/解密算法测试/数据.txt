@@ -262,9 +262,9 @@ Pool page ffff898b12012dcb region is Nonpaged pool
 
 清除PG的想法：
 1. 遍历DPC，如何可以到PG挂的DPC，就直接移除
-2. 没有找到DPC,就遍历 &ExWorkerQueue[QueueType]; 工作队列，拿到 WorkItem = CONTAINING_RECORD(Entry, WORK_QUEUE_ITEM, List)， 判断 WorkerRoutine或者Parameter是不是PG插入的WorkItem，是就移除。
-3. 最后还是没有找到的话，遍历系统线程，当Thread->ActiveExWorker为1，且入口为ExpWorkerThread，则做进一步处理，栈回溯等等确实是否是执行Pg WotkItem的线程，移除。
-
+2. (作废, WorkQueue太底层了每个系统结构不一样， 而且WorkItem很快就会得到执行，导致再Queue中时间短)没有找到DPC,就遍历 &ExWorkerQueue[QueueType]; 工作队列，拿到 WorkItem = CONTAINING_RECORD(Entry, WORK_QUEUE_ITEM, List)， 判断 WorkerRoutine或者Parameter是不是PG插入的WorkItem，是就移除。
+3. 遍历系统线程，当Thread->ActiveExWorker为1，且入口为ExpWorkerThread，则做进一步处理，栈回溯等等确实是否是执行Pg WotkItem的线程，移除。
+4. 遍历系统大页且是非分页内存的内存，然后再偏移0-0x1000范围尝试解密pg_ctx，解密成功则修改后加密。解密状态的PG已经再 WotkItem的线程中干掉了。
 
 
 PG保存的函数
@@ -837,7 +837,60 @@ ffff898b`120109ad  ffff898b`12010000
 ffff898b`120109b5  00000000`00000000
 ffff898b`120109bd  fffff803`02ded770 nt!ExpCenturyDpcRoutine
 
+DPC执行
+00 fffff803`02dedaab     : fffff803`0287d140 00000000`00000100 fffff803`0287d110 fffff803`0287d0b4 : 0xffff898b`120101e5
+01 fffff803`02c5153b     : 00000000`00000001 fffff803`0287eb20 fffff803`02879000 fffff803`0287f000 : nt!ExpCenturyDpcRoutine$fin$0+0x25d
+02 fffff803`02c7eb6f     : fffff803`0287eb20 fffff803`0287d6c0 00000000`00000000 fffff803`0287eb00 : nt!_C_specific_handler+0x1ab
+03 fffff803`02b7b2dd     : 00000000`00000000 fffff803`0287eaf0 fffff803`0287d6c0 fffff803`0287eb20 : nt!RtlpExecuteHandlerForUnwind+0xf
+04 fffff803`02c5147f     : fffff803`02ed5d60 fffff803`00000001 fffff803`0287eb20 fffff803`0287f000 : nt!RtlUnwindEx+0x52d
+05 fffff803`02c7eaef     : fffff803`0287eb20 fffff803`0287de90 00000000`00000000 00000000`0010001f : nt!_C_specific_handler+0xef
+06 fffff803`02b78df5     : 00000000`00000000 00000000`00000000 fffff803`0287de90 00007fff`ffff0000 : nt!RtlpExecuteHandlerForException+0xf
+07 fffff803`02b7d38e     : fffff803`0287e888 fffff803`0287e5d0 fffff803`0287e888 ffff898b`1033b21b : nt!RtlDispatchException+0x4a5
+08 fffff803`02c87c1d     : ffff898b`13453740 ffff898b`10e131a0 fffff803`0487a930 fffff803`02a162cb : nt!KiDispatchException+0x16e
+09 fffff803`02c839a2     : 00000000`00000000 fffff803`060efcf7 00000000`00000002 ffff898b`10e61000 : nt!KiExceptionDispatch+0x11d
+0a fffff803`02c8023d     : fffff803`0287ebd9 fffff803`060f0668 ffff898b`00000000 00001f80`00ff02fe : nt!KiGeneralProtectionFault+0x322
+0b fffff803`02c80272     : 00000000`0000032f fffff803`02b21308 00000000`00000000 00000000`00002328 : nt!KiCustomRecurseRoutine9+0xd
+0c fffff803`02ded80b     : 00000000`00000000 ffff898b`109e4040 00000000`00000000 fffff803`0190f180 : nt!KiCustomAccessRoutine9+0x22
+0d fffff803`02b21579     : 00000000`00000006 c784cb1a`fcdf05a0 00000000`00000003 ffff898b`1033b21b : nt!ExpCenturyDpcRoutine+0x9b
+0e fffff803`02b202d9     : 00000000`00000008 00000000`00989680 00000000`0000a8ba 00000000`000000d2 : nt!KiProcessExpiredTimerList+0x169
+0f fffff803`02c7cd05     : 00000000`00000000 fffff803`0190f180 ffffa301`060fd000 07f1137f`ab69605e : nt!KiRetireDpcList+0x4e9
+10 fffff803`02c7caf0     : 00000000`00000102 fffff803`02a162cb 00000000`00000000 00000000`00000003 : nt!KxRetireDpcList+0x5
+11 fffff803`02c7c3a5     : 07f1137f`ab69605e fffff803`02c77821 c81ecb17`b1b54a58 fffff681`71a53b80 : nt!KiDispatchInterruptContinue
+12 fffff803`02c77821     : c81ecb17`b1b54a58 fffff681`71a53b80 ffffa301`060fd000 00000000`00000000 : nt!KiDpcInterruptBypass+0x25
+13 00007ffb`3c4b8093     : c81ecb17`b1b54a58 00000169`01bb9320 00000067`755fef90 00000067`755fee40 : nt!KiInterruptDispatch+0xb1
+14 c81ecb17`b1b54a58     : 00000169`01bb9320 00000067`755fef90 00000067`755fee40 00000169`766b0000 : 0x00007ffb`3c4b8093
+15 00000169`01bb9320     : 00000067`755fef90 00000067`755fee40 00000169`766b0000 00000067`755feb20 : 0xc81ecb17`b1b54a58
+16 00000067`755fef90     : 00000067`755fee40 00000169`766b0000 00000067`755feb20 00000067`755fea30 : 0x00000169`01bb9320
+17 00000067`755fee40     : 00000169`766b0000 00000067`755feb20 00000067`755fea30 00000169`01bb9320 : 0x00000067`755fef90
+18 00000169`766b0000     : 00000067`755feb20 00000067`755fea30 00000169`01bb9320 00000169`7c982640 : 0x00000067`755fee40
+19 00000067`755feb20     : 00000067`755fea30 00000169`01bb9320 00000169`7c982640 00000000`00000000 : 0x00000169`766b0000
+1a 00000067`755fea30     : 00000169`01bb9320 00000169`7c982640 00000000`00000000 00000000`00000000 : 0x00000067`755feb20
+1b 00000169`01bb9320     : 00000169`7c982640 00000000`00000000 00000000`00000000 00000000`00000000 : 0x00000067`755fea30
+1c 00000169`7c982640     : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : 0x00000169`01bb9320
+1d 00000000`00000000     : 00000000`00000000 00000000`00000000 00000000`00000000 000000a0`00000008 : 0x00000169`7c982640
+
 
 
 CTX + 00000000`0001b781 = FsRtlUninitializeSmallMcbl
 获取到WorkItem线程回溯，再给 CTX + 00000000`0001b781 +9 下软断点，可以中断，FsRtlMdlReadCompleteDevEx里面清除硬件断点，但不会自检查了。
+
+可能插入DPC的地方：
+KeSetCoalescableTimer  // 这种情况可以直接捕获到
+KeInsertQueueApc
+
+RSI=CTX
+bp RSI+00000000`00003630 = FsRtlUninitializeSmallMcbl中的清除硬件断点
+
+bp FFFF898B120A019A+00000000`00003630  dr71
+
+bp FFFF898B120A0004+ E38E  dr72
+
+FFFF898B120A0004 + 142b1 allocate 
+
+
+
+bp FFFF898B120A03D9 + 15BFD 挂dpc
+
+
+ba w1 FFFF898B1033B21B+0x20
+ba w1 FFFF898B1032895F+0x20

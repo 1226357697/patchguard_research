@@ -2,6 +2,23 @@
 #include <ntifs.h>
 #include <intrin.h>
 
+//0x10 bytes (sizeof)
+struct _KDPC_LIST
+{
+  struct _SINGLE_LIST_ENTRY ListHead;                                     //0x0
+  struct _SINGLE_LIST_ENTRY* LastEntry;                                   //0x8
+};
+
+//0x28 bytes (sizeof)
+struct _KDPC_DATA
+{
+  struct _KDPC_LIST DpcList;                                              //0x0
+  ULONGLONG DpcLock;                                                      //0x10
+  volatile LONG DpcQueueDepth;                                            //0x18
+  ULONG DpcCount;                                                         //0x1c
+  struct _KDPC* volatile ActiveDpc;                                       //0x20
+};
+
 //0x20 bytes (sizeof)
 struct _KTIMER_TABLE_ENTRY
 {

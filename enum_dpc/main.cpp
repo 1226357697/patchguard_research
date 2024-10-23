@@ -379,11 +379,17 @@ bool guess_pg(PKTIMER timer)
   if(dpc == NULL || !MmIsAddressValid(dpc))
     return false;
 
+  if (dpc->DeferredRoutine == (PVOID)0xfffff80302ded770 
+    || dpc->DeferredRoutine == (PVOID)0xfffff80302bb2030)
+  {
+
+    log_i("dpc->DeferredRoutine: %p\n", dpc->DeferredRoutine);
+  }
+  uint64_t pg_ptr_xor = *(uint64_t*)(dpc + 1);
   //log_i("DeferredContext %p %p \n", dpc->DeferredContext, dpc->DeferredRoutine);
   INT64 SpecialBit = (INT64)dpc->DeferredContext >> 47;
   if (SpecialBit != 0 && SpecialBit != -1)
   {
-    uint64_t pg_ptr_xor = *(uint64_t*)(dpc + 1);
     pg_context = (PVOID)((uint64_t)dpc->DeferredContext ^ pg_ptr_xor | 0xFFFF800000000000);
     
     if (MmIsAddressValid(pg_context))
@@ -393,13 +399,20 @@ bool guess_pg(PKTIMER timer)
     }
   }
 
-  //uint64_t pg_ptr_xor = *(uint64_t*)(dpc+1);
-  //if (pg_ptr_xor!= 0 && dpc->DeferredContext!= NULL 
-  //&& !MmIsAddressValid( dpc->DeferredContext) && MmIsAddressValid((PVOID)((uint64_t)dpc->DeferredContext ^ pg_ptr_xor | 0xFFFF800000000000)) )
+  //if (dpc == (KDPC*)0xFFFF898B1032895F || dpc == (KDPC*)0xFFFF898B1033B21B)
   //{
-  //  log_i("dpc:%p is not general pg xor\n", dpc);
-  //  return true;
+  //  if (dpc == (KDPC*)0xFFFF898B1032895F || dpc == (KDPC*)0xFFFF898B1033B21B)
+  //  {
+  //    __debugbreak();
+  //  }
+  //  if (!MmIsAddressValid(dpc->DeferredContext) && MmIsAddressValid((PVOID)(((uint64_t)dpc->DeferredContext ^ pg_ptr_xor) | 0xFFFF800000000000)))
+  //  {
+  //    log_i("dpc:%p is not general pg xor\n", dpc);
+  //    pg_context = (PVOID)((uint64_t)dpc->DeferredContext ^ pg_ptr_xor | 0xFFFF800000000000);
+  //    return true;
+  //  }
   //}
+
 
   return false;
 }
@@ -633,44 +646,211 @@ int  FindWorkerITemThread()
 
   return count;
 }
+#define USE_REACTOS_DDK
 
-
-KPCR* kpcr = NULL;
+typedef enum _SYSTEM_INFORMATION_CLASS {
+  SystemBasicInformation,
+  SystemProcessorInformation,
+  SystemPerformanceInformation,
+  SystemTimeOfDayInformation,
+  SystemPathInformation,
+  SystemProcessInformation,
+  SystemCallCountInformation,
+  SystemDeviceInformation,
+  SystemProcessorPerformanceInformation,
+  SystemFlagsInformation,
+  SystemCallTimeInformation,
+  SystemModuleInformation,
+  SystemLocksInformation,
+  SystemStackTraceInformation,
+  SystemPagedPoolInformation,
+  SystemNonPagedPoolInformation,
+  SystemHandleInformation,
+  SystemObjectInformation,
+  SystemPageFileInformation,
+  SystemVdmInstemulInformation,
+  SystemVdmBopInformation,
+  SystemFileCacheInformation,
+  SystemPoolTagInformation,
+  SystemInterruptInformation,
+  SystemDpcBehaviorInformation,
+  SystemFullMemoryInformation,
+  SystemLoadGdiDriverInformation,
+  SystemUnloadGdiDriverInformation,
+  SystemTimeAdjustmentInformation,
+  SystemSummaryMemoryInformation,
+#ifndef USE_REACTOS_DDK
+  SystemNextEventIdInformation,
+  SystemEventIdsInformation,
+  SystemCrashDumpInformation,
+#else
+  SystemMirrorMemoryInformation,
+  SystemPerformanceTraceInformation,
+  SystemObsolete0,
+#endif // USE_REACTOS_DDK
+  SystemExceptionInformation,
+  SystemCrashDumpStateInformation,
+  SystemKernelDebuggerInformation,
+  SystemContextSwitchInformation,
+  SystemRegistryQuotaInformation,
+  SystemExtendServiceTableInformation,
+  SystemPrioritySeperation,
+  SystemPlugPlayBusInformation,
+  SystemDockInformation,
+#ifdef USE_REACTOS_DDK
+  SystemPowerInformationNative,
+#elif defined IRP_MN_START_DEVICE
+  SystemPowerInformationInfo,
+#else
+  SystemPowerInformation,
+#endif // USE_REACTOS_DDK
+  SystemProcessorSpeedInformation,
+  SystemCurrentTimeZoneInformation,
+  SystemLookasideInformation,
+#ifdef USE_REACTOS_DDK
+  SystemTimeSlipNotification,
+  SystemSessionCreate,
+  SystemSessionDetach,
+  SystemSessionInformation,
+  SystemRangeStartInformation,
+  SystemVerifierInformation,
+  SystemAddVerifier,
+  SystemSessionProcessesInformation,
+  SystemLoadGdiDriverInSystemSpaceInformation,
+  SystemNumaProcessorMap,
+  SystemPrefetcherInformation,
+  SystemExtendedProcessInformation,
+  SystemRecommendedSharedDataAlignment,
+  SystemComPlusPackage,
+  SystemNumaAvailableMemory,
+  SystemProcessorPowerInformation,
+  SystemEmulationBasicInformation,
+  SystemEmulationProcessorInformation,
+  SystemExtendedHanfleInformation,
+  SystemLostDelayedWriteInformation,
+  SystemBigPoolInformation,
+  SystemSessionPoolTagInformation,
+  SystemSessionMappedViewInformation,
+  SystemHotpatchInformation,
+  SystemObjectSecurityMode,
+  SystemWatchDogTimerHandler,
+  SystemWatchDogTimerInformation,
+  SystemLogicalProcessorInformation,
+  SystemWo64SharedInformationObosolete,
+  SystemRegisterFirmwareTableInformationHandler,
+  SystemFirmwareTableInformation,
+  SystemModuleInformationEx,
+  SystemVerifierTriageInformation,
+  SystemSuperfetchInformation,
+  SystemMemoryListInformation,
+  SystemFileCacheInformationEx,
+  SystemThreadPriorityClientIdInformation,
+  SystemProcessorIdleCycleTimeInformation,
+  SystemVerifierCancellationInformation,
+  SystemProcessorPowerInformationEx,
+  SystemRefTraceInformation,
+  SystemSpecialPoolInformation,
+  SystemProcessIdInformation,
+  SystemErrorPortInformation,
+  SystemBootEnvironmentInformation,
+  SystemHypervisorInformation,
+  SystemVerifierInformationEx,
+  SystemTimeZoneInformation,
+  SystemImageFileExecutionOptionsInformation,
+  SystemCoverageInformation,
+  SystemPrefetchPathInformation,
+  SystemVerifierFaultsInformation,
+  MaxSystemInfoClass,
+#endif // USE_REACTOS_DDK
+} SYSTEM_INFORMATION_CLASS;
 
 int  FindDPC()
 {
   int count = 0;
-  _KTIMER_TABLE* ktimer_table = &kpcr->CurrentPrcb->TimerTable;
-  for (int i = 0; i < 256; ++i)
+  KPCR* kpcr = NULL;
+  int cpu_num = KeNumberProcessors;
+  for (int num  =0; num < cpu_num; ++num)
   {
-    _KTIMER_TABLE_ENTRY* entry = &ktimer_table->TimerEntries[i];
-    int try_count = 4096;
-    KIRQL OldIrql;  // 用于存储旧的IRQL
-    KeAcquireSpinLock(&entry->Lock, &OldIrql);
-    _LIST_ENTRY* list_entry = entry->Entry.Flink;
-    while (list_entry && list_entry->Flink != &entry->Entry)
+    KeSetSystemAffinityThread(num +1);
+    kpcr = get_kpcr();
+
+    KeRevertToUserAffinityThread();
+
+    log_i("kpcr: %p(%d)\n", kpcr, num +1);
+    log_i("timertable: %p\n", &kpcr->CurrentPrcb->TimerTable);
+    _KTIMER_TABLE* ktimer_table = &kpcr->CurrentPrcb->TimerTable;
+    for (int i = 0; i < 256; ++i)
     {
-      if (try_count <= 0)
+      _KTIMER_TABLE_ENTRY* entry = &ktimer_table->TimerEntries[i];
+      int try_count = 8096;
+      KIRQL OldIrql;  // 用于存储旧的IRQL
+      KeAcquireSpinLock(&entry->Lock, &OldIrql);
+      _LIST_ENTRY* list_entry = entry->Entry.Flink;
+      while (list_entry && list_entry->Flink != &entry->Entry)
       {
-        log_i("try count end\n");
-        break;
+        if (try_count <= 0)
+        {
+          log_i("try count end\n");
+          break;
+        }
+        
+        PKTIMER timer = CONTAINING_RECORD(list_entry, KTIMER, TimerListEntry);
+        if (guess_pg(timer))
+        {
+          log_i("guess pg timer:%p dpc:%p(%p) pg_context:%p\n", timer, timer->Dpc, decode_dpc(timer), pg_context);
+          pg_context = 0;
+          count++;
+          //__debugbreak();
+        }
+        //__debugbreak();
+        try_count--;
+        list_entry = list_entry->Flink;
+      }
+      KeReleaseSpinLock(&entry->Lock, OldIrql);
+
+    }
+
+    
+    for (int i = 0; i < 64; ++i)
+    {
+      _KTIMER* timer = ktimer_table->TimerExpiry[i];
+      if (timer)
+      {
+        log_i("TimerExpiry timer:%p\n", timer);
+        if (guess_pg(timer))
+        {
+          log_i("TimerExpiry guess pg timer:%p dpc:%p(%p) pg_context:%p\n", timer, timer->Dpc, decode_dpc(timer), pg_context);
+          pg_context = 0;
+          count++;
+          __debugbreak();
+        }
+      }
+    }
+
+    _KDPC_DATA* DpcData = (_KDPC_DATA*)(((char*)kpcr->CurrentPrcb) + 0x2e00);
+    for (int i = 0; i< 2; ++i)
+    { 
+      PKDPC dpc = DpcData[i].ActiveDpc;
+      if (dpc)
+      {
+        log_i("DpcData dpc:%p\n", dpc);
+        uint64_t pg_ptr_xor = *(uint64_t*)(dpc + 1);
+        //log_i("DeferredContext %p %p \n", dpc->DeferredContext, dpc->DeferredRoutine);
+        INT64 SpecialBit = (INT64)dpc->DeferredContext >> 47;
+        if (SpecialBit != 0 && SpecialBit != -1)
+        {
+
+          log_i("DpcData guess pg  dpc:%p\n", dpc);
+          __debugbreak();
+        }
       }
 
-      PKTIMER timer = CONTAINING_RECORD(list_entry, KTIMER, TimerListEntry);
-      if (guess_pg(timer))
-      {
-        log_i("guess pg timer:%p dpc:%p(%p) pg_context:%p\n", timer, timer->Dpc, decode_dpc(timer), pg_context);
-        pg_context = 0;
-        count++;
-        //__debugbreak();
-      }
-      //__debugbreak();
-      try_count--;
-      list_entry = list_entry->Flink;
     }
-    KeReleaseSpinLock(&entry->Lock, OldIrql);
+
+
 
   }
+  
 
   return count;
 }
@@ -813,16 +993,16 @@ VOID WorkerThread( _In_ PVOID StartContext )
     log_i("PG total count: %d \n", dpc_count + worker_thread_coubt);
 
 
-    int toal_count = (dpc_count + worker_thread_coubt);
-    if (toal_count == 0)
-    {
-      HookFunction();
-    }
-    else
-    {
-      // 待执行PG
-      UnHookFunction();
-    }
+    //int toal_count = (dpc_count + worker_thread_coubt);
+    //if (toal_count == 0)
+    //{
+    //  HookFunction();
+    //}
+    //else
+    //{
+    //  // 待执行PG
+    //  UnHookFunction();
+    //}
 
     //if ( (dpc_count + worker_thread_coubt) == 0 && HOOKED_KeINsertQueueDpc == FALSE)
     //{
@@ -864,9 +1044,7 @@ EXTERN_C NTSTATUS DriverEntry(PDRIVER_OBJECT driver_obj, PUNICODE_STRING registe
   {
     return STATUS_UNSUCCESSFUL;
   }
-  kpcr = get_kpcr();
-  log_i("kpcr: %p\n", kpcr);
-  log_i("timertable: %p\n", &kpcr->CurrentPrcb->TimerTable);
+  
   log_i("KiWaitNever:%llX KiWaitAlways:%llX \n", *pKiWaitNever, *pKiWaitAlways);
 
   //HookFunction();
