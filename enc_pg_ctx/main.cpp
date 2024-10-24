@@ -100,59 +100,50 @@ int main()
 
   // 解密pg_context
   uint64_t* pg_ctx_ptr = (uint64_t*)enc_ctx.data();
-  uint32_t end_loop = 25;
-  uint32_t end2_loop = 16;
-  uint32_t i = 0;
-  while (i < end_loop)
+  const uint32_t CmpAppendDllSection_Size = 0xc8;
+  const uint32_t CmpAppendDllSection_Count = 0xc8 / 8;
+  uint32_t count = CmpAppendDllSection_Count;
+  uint32_t sub_count = sizeof(move_table);
+  for (uint32_t i = 0; i < count; ++i)
   {
     uint64_t item = pg_ctx_ptr[i];
     pg_ctx_ptr[i] = _byteswap_uint64(_rotl64(pg_ctx_ptr[i] ^ KiWaitNever, (char)KiWaitNever) ^ PGDecodeKey) ^ KiWaitAlways;
     pg_ctx_ptr[i] = pg_ctx_ptr[i] + i + PGContextPtr;
 
     char tmp_shift_key = (char)(~item & 0x3f);
-    PGDecodeKey = PGDecodeKey ^ _rotr64(((200 - i) ^ i), tmp_shift_key);
-    PGDecodeKey = _rotl64(PGDecodeKey, tmp_shift_key);
-    PGDecodeKey = PGDecodeKey + PGContextPtr;
-    PGDecodeKey = PGDecodeKey ^ 0xFB006943;
+    PGDecodeKey = PGDecodeKey ^ _rotr64(((CmpAppendDllSection_Size - i) ^ i), tmp_shift_key);
+    PGDecodeKey = (_rotl64(PGDecodeKey, tmp_shift_key) + PGContextPtr) ^ 0xFB006943;
 
-    for (uint32_t j = 0; j < end2_loop; ++j)
+    for (uint32_t j = 0; j < sub_count; ++j)
     {
       pg_ctx_ptr[i] = _rotl64(pg_ctx_ptr[i], 4);
-      int mi = (pg_ctx_ptr[i] & 0xf);
-      int move = move_table[mi];
-      pg_ctx_ptr[i] = pg_ctx_ptr[i] & 0xFFFFFFFFFFFFFFF0;
-
-      pg_ctx_ptr[i] = pg_ctx_ptr[i] | move;
+      int byte = (pg_ctx_ptr[i] & 0xf);
+      pg_ctx_ptr[i] = (pg_ctx_ptr[i] & (~0XF)) | move_table[byte];
     }
-    i ++;
 
-    if (i == 25)
+
+    if (i == CmpAppendDllSection_Count - 1)
     {
       //继续 解密context body
-      #define CONST_XOR_VALUE 0x17042898A40898A4ULL
+#define CONST_XOR_VALUE 0x17042898A40898A4ULL
       uint64_t value = CONST_XOR_VALUE >> 55 | CONST_XOR_VALUE << 9;
       if ((value ^ pg_ctx_ptr[0]) != 0)
       {
         uint64_t tmp_dec = value;
-        tmp_dec ^= pg_ctx_ptr[i - 1];
-        tmp_dec ^= pg_ctx_ptr[0];
-        pg_ctx_ptr[i - 1] = tmp_dec;
+        tmp_dec ^= pg_ctx_ptr[CmpAppendDllSection_Count - 1] ^ pg_ctx_ptr[0];
 
-        end_loop += ((uint32_t*)&pg_ctx_ptr[i])[-1];
-
-        tmp_dec = value;
-        tmp_dec ^= pg_ctx_ptr[i - 1];
-        tmp_dec ^= pg_ctx_ptr[0];
-        pg_ctx_ptr[i - 1] = tmp_dec;
-
+        count += *(((uint32_t*)&tmp_dec) + 1);
       }
-      end2_loop = 1;
+
+      sub_count = 1;
     }
   }
+
   write_dec_conetxt_data(enc_ctx);
   printf("解密context第一次完毕\n");
   // 可以简化成 85131481131482E
-  PGDecodeKey = 0x6244935FAD1B6FF5 ^ 0x6A15A217BC2A27DB ^ pg_ctx_ptr[0] ;
+  //PGDecodeKey = 0x6244935FAD1B6FF5 ^ 0x6A15A217BC2A27DB ^ pg_ctx_ptr[0] ;
+  PGDecodeKey = 0x85131481131482E ^ pg_ctx_ptr[0] ;
   printf("PGDecodeKey: %llX\n", PGDecodeKey);
 
   printf("开始第二次解密context\n");
