@@ -110,10 +110,6 @@ int main()
     pg_ctx_ptr[i] = _byteswap_uint64(_rotl64(pg_ctx_ptr[i] ^ KiWaitNever, (char)KiWaitNever) ^ PGDecodeKey) ^ KiWaitAlways;
     pg_ctx_ptr[i] = pg_ctx_ptr[i] + i + PGContextPtr;
 
-    char tmp_shift_key = (char)(~item & 0x3f);
-    PGDecodeKey = PGDecodeKey ^ _rotr64(((CmpAppendDllSection_Size - i) ^ i), tmp_shift_key);
-    PGDecodeKey = (_rotl64(PGDecodeKey, tmp_shift_key) + PGContextPtr) ^ 0xFB006943;
-
     for (uint32_t j = 0; j < sub_count; ++j)
     {
       pg_ctx_ptr[i] = _rotl64(pg_ctx_ptr[i], 4);
@@ -121,10 +117,15 @@ int main()
       pg_ctx_ptr[i] = (pg_ctx_ptr[i] & (~0XF)) | move_table[byte];
     }
 
+    // 更新滚动密钥
+    char tmp_shift_key = (char)(~item & 0x3f);
+    PGDecodeKey = PGDecodeKey ^ _rotr64(((CmpAppendDllSection_Size - i) ^ i), tmp_shift_key);
+    PGDecodeKey = (_rotl64(PGDecodeKey, tmp_shift_key) + PGContextPtr) ^ 0xFB006943;
 
+
+    //继续 解密context body
     if (i == CmpAppendDllSection_Count - 1)
     {
-      //继续 解密context body
 #define CONST_XOR_VALUE 0x17042898A40898A4ULL
       uint64_t value = CONST_XOR_VALUE >> 55 | CONST_XOR_VALUE << 9;
       if ((value ^ pg_ctx_ptr[0]) != 0)
