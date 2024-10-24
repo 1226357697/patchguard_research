@@ -24,7 +24,7 @@ uint64_t PGDecodeKey = 0;
 uint64_t KiWaitNever = 0x6ab044059fdd7af6;
 uint64_t KiWaitAlways = 0x00b3fbf32de56818;
 
-uint8_t move_table[16] { 0x09, 0x0A, 0x0C, 0x01, 0x0F, 0x00, 0x05, 0x0E, 0x04, 0x03, 0x07, 0x0D, 0x08, 0x06, 0x02, 0x0B };
+uint8_t map_table[16] = { 0x00, 0x03, 0x05, 0x08, 0x06, 0x09, 0x0c, 0x07, 0x0d, 0x0a, 0x0e, 0x04, 0x01, 0x0f, 0x0b, 0x02 };
  
 
 unsigned long long btc64(unsigned long long n, unsigned long long  pos) 
@@ -92,9 +92,9 @@ int main()
 
   // 解密move_table
   // 00 03 05 08 06 09 0c 07 0d 0a 0e 04 01 0f 0b 02
-  for (int i = 0; i< sizeof(move_table); ++i)
+  for (int i = 0; i< sizeof(map_table); ++i)
   {
-    move_table[i] ^= 9;
+    map_table[i] ^= 9;
   }
   printf("开始第一次解密context\n");
 
@@ -103,7 +103,7 @@ int main()
   const uint32_t CmpAppendDllSection_Size = 0xc8;
   const uint32_t CmpAppendDllSection_Count = 0xc8 / 8;
   uint32_t count = CmpAppendDllSection_Count;
-  uint32_t sub_count = sizeof(move_table);
+  uint32_t sub_count = sizeof(map_table);
   for (uint32_t i = 0; i < count; ++i)
   {
     uint64_t item = pg_ctx_ptr[i];
@@ -113,8 +113,8 @@ int main()
     for (uint32_t j = 0; j < sub_count; ++j)
     {
       pg_ctx_ptr[i] = _rotl64(pg_ctx_ptr[i], 4);
-      int byte = (pg_ctx_ptr[i] & 0xf);
-      pg_ctx_ptr[i] = (pg_ctx_ptr[i] & (~0XF)) | move_table[byte];
+      int index = (pg_ctx_ptr[i] & 0xf);
+      pg_ctx_ptr[i] = (pg_ctx_ptr[i] & (~0XF)) | map_table[index];
     }
 
     // 更新滚动密钥
