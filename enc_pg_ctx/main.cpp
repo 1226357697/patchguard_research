@@ -92,10 +92,10 @@ int main()
 
   // 解密move_table
   // 00 03 05 08 06 09 0c 07 0d 0a 0e 04 01 0f 0b 02
-  for (int i = 0; i< sizeof(map_table); ++i)
-  {
-    map_table[i] ^= 9;
-  }
+  //for (int i = 0; i< sizeof(map_table); ++i)
+  //{
+  //  map_table[i] ^= 9;
+  //}
   printf("开始第一次解密context\n");
 
   // 解密pg_context
