@@ -173,6 +173,7 @@ PG执行流程：
 	// CmpLazyFlushDpcRoutine
 	// CmpEnableLazyFlushDpcRoutine
 	// ExpTimerDpcRoutine
+	// KiTimerDispatch 这个很隐蔽， 通常是无模块的
 2. 判断是否是PG触发条件，当 (INT64)dpc->DeferredContext >> 47 结果不等于0 且不等于-1，触发异常，进入异常处理回调进行PG_CTX第一层解密
 3. 执行PG_CTX中的CmpAppendDllSection副本进行自解密(第二层解密)
 4. 执行 patchguard_entry_140B101A0, 自校验逻辑可能在这个函数里, 一些校验逻辑也在，修改ExQueueWorkItem代码也会蓝屏。
