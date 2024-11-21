@@ -174,6 +174,8 @@ PG执行流程：
 	// CmpEnableLazyFlushDpcRoutine
 	// ExpTimerDpcRoutine
 	// KiTimerDispatch 这个很隐蔽， 通常是无模块的
+	// KiDispatchCallout 枚举线程插入APC调用
+	// KiDpcDispatch
 2. 判断是否是PG触发条件，当 (INT64)dpc->DeferredContext >> 47 结果不等于0 且不等于-1，触发异常，进入异常处理回调进行PG_CTX第一层解密
 3. 执行PG_CTX中的CmpAppendDllSection副本进行自解密(第二层解密)
 4. 执行 patchguard_entry_140B101A0, 自校验逻辑可能在这个函数里, 一些校验逻辑也在，修改ExQueueWorkItem代码也会蓝屏。
@@ -194,6 +196,25 @@ PG执行流程：
 
 8. 最后由 FsRtlUninitializeSmallMcb来释放当前上下文的内存。
 9. 无线循环此流程
+
+// KiDispatchCallout
+// nt!KiDispatchCallout+0x1b9
+fffffa85`4c00d8e8  fffff805`466f2c24 nt!KiDeliverApc+0x2b4 (被隐藏)
+fffffa85`4c00d8f0  00000000`00000000
+fffffa85`4c00d8f8  00000000`00000000
+fffffa85`4c00d900  00000000`00000000
+fffffa85`4c00d908  00000000`00000000
+fffffa85`4c00d910  fffffa85`4c00d938
+fffffa85`4c00d918  00000000`00000000
+fffffa85`4c00d920  00000000`00000000
+fffffa85`4c00d928  00000000`00000000
+fffffa85`4c00d930  fffff805`46829610 nt!EmpCheckErrataList
+fffffa85`4c00d938  00000000`00000000
+fffffa85`4c00d940  ffffb802`2af26d42
+fffffa85`4c00d948  00000000`00000000
+fffffa85`4c00d950  00ffffff`ffffffff
+fffffa85`4c00d958  00000000`00000001
+fffffa85`4c00d960  00000000`00000000
 
 
 kd> kB
@@ -895,3 +916,47 @@ bp FFFF898B120A03D9 + 15BFD 挂dpc
 
 ba w1 FFFF898B1033B21B+0x20
 ba w1 FFFF898B1032895F+0x20
+
+
+思路：
+枚举TimerTable, 判断是否是PG,是则移除Timer
+给WokerThread 插入 APC,栈回溯判断是不是无模块，判断是不是PG。
+干掉 KiSwInterruptDispatch
+干掉
+-----
+.rdata:00000001404238F0 D0 A3 1C 40 01 00 00 00       dq offset KiInterruptThunk
+.rdata:00000001404238F8 E0 A3 1C 40 01 00 00 00       dq offset $$1
+.rdata:0000000140423900 F0 A3 1C 40 01 00 00 00       dq offset $$2
+.rdata:0000000140423908 00 A4 1C 40 01 00 00 00       dq offset $$3
+.rdata:0000000140423910 10 A4 1C 40 01 00 00 00       dq offset $$4
+.rdata:0000000140423918 20 A4 1C 40 01 00 00 00       dq offset $$5
+.rdata:0000000140423920 30 A4 1C 40 01 00 00 00       dq offset $$6
+.rdata:0000000140423928 40 A4 1C 40 01 00 00 00       dq offset $$7
+.rdata:0000000140423930 50 A4 1C 40 01 00 00 00       dq offset $$8
+.rdata:0000000140423938 60 A4 1C 40 01 00 00 00       dq offset $$9
+.rdata:0000000140423940 70 A4 1C 40 01 00 00 00       dq offset $$a
+.rdata:0000000140423948 80 A4 1C 40 01 00 00 00       dq offset $$b
+.rdata:0000000140423950 90 A4 1C 40 01 00 00 00       dq offset $$c
+.rdata:0000000140423958 A0 A4 1C 40 01 00 00 00       dq offset $$d
+.rdata:0000000140423960 B0 A4 1C 40 01 00 00 00       dq offset $$e
+.rdata:0000000140423968 C0 A4 1C 40 01 00 00 00       dq offset $$f
+.rdata:0000000140423970 D0 A4 1C 40 01 00 00 00       dq offset KiMachineCheckControl
+.rdata:0000000140423978 E0 A4 1C 40 01 00 00 00       dq offset $$11
+.rdata:0000000140423980 F0 A4 1C 40 01 00 00 00       dq offset $$12
+.rdata:0000000140423988 00 A5 1C 40 01 00 00 00       dq offset $$13
+.rdata:0000000140423990 10 A5 1C 40 01 00 00 00       dq offset $$14
+.rdata:0000000140423998 20 A5 1C 40 01 00 00 00       dq offset $$15
+.rdata:00000001404239A0 30 A5 1C 40 01 00 00 00       dq offset $$16
+.rdata:00000001404239A8 40 A5 1C 40 01 00 00 00       dq offset $$17
+.rdata:00000001404239B0 50 A5 1C 40 01 00 00 00       dq offset $$18
+.rdata:00000001404239B8 60 A5 1C 40 01 00 00 00       dq offset $$19
+.rdata:00000001404239C0 70 A5 1C 40 01 00 00 00       dq offset $$1a
+.rdata:00000001404239C8 80 A5 1C 40 01 00 00 00       dq offset $$1b
+.rdata:00000001404239D0 90 A5 1C 40 01 00 00 00       dq offset $$1c
+.rdata:00000001404239D8 A0 A5 1C 40 01 00 00 00       dq offset $$1d
+.rdata:00000001404239E0 B0 A5 1C 40 01 00 00 00       dq offset $$1e
+.rdata:00000001404239E8 C0 A5 1C 40 01 00 00 00       dq offset $$1f
+-----
+枚举 BigPoolInformation， 设置NX， HOOK 页异常中断
+处理 CcInitializeBcbProfiler
+启动时： 干掉 ExNotifyCallback(CallbackObject, sub_1403DF150, &__27); ||  KeExpandKernelStackAndCallout(sub_140B30090, Parameter, 0xC000ui64);
